@@ -19,12 +19,33 @@ fn main() {
         .collect::<Vec<_>>();
 
     println!("{}", checksum(&spreadsheet));
+    println!("{}", evenly_divisible(&spreadsheet));
 }
 
 fn checksum(spreadsheet: &Spreadsheet) -> i32 {
     // Ideally we'd only iterate over each row once, hopefully the compiler optimises it away
     spreadsheet.iter()
         .map(|row| row.iter().max().unwrap() - row.iter().min().unwrap())
+        .sum()
+}
+
+fn evenly_divisible_row(row: &[i32]) -> Option<i32> {
+    for i in 0..row.len() {
+        for j in 0..row.len() {
+            if i == j { continue };
+
+            if row[i] % row[j] == 0 {
+                return Some(row[i] / row[j])
+            }
+        }
+    }
+
+    None
+}
+
+fn evenly_divisible(spreadsheet: &Spreadsheet) -> i32 {
+    spreadsheet.iter()
+        .flat_map(|row| evenly_divisible_row(row))
         .sum()
 }
 
@@ -38,4 +59,16 @@ fn test_checksum() {
 
     // In this example, the spreadsheet's checksum would be 8 + 4 + 6 = 18.
     assert_eq!(checksum(&input), 18);
+}
+
+#[test]
+fn test_evenly_divisible() {
+    let input = vec![
+        vec![5, 9, 2, 8],
+        vec![9, 4, 7, 3],
+        vec![3, 8, 6, 5],
+    ];
+
+    // In this example, the sum of the results would be 4 + 3 + 2 = 9.
+    assert_eq!(evenly_divisible(&input), 9);
 }
