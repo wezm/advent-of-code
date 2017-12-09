@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{Read};
 use std::str::FromStr;
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 fn main() {
     let mut buffer = String::new();
@@ -13,7 +13,8 @@ fn main() {
         .map(|digit| i32::from_str(&digit).unwrap())
         .collect::<Vec<_>>();
 
-    println!("{}", redistribution_cycles(&mut banks));
+    let result = redistribution_cycles(&mut banks);
+    println!("cycles = {}\nsize of loop = {}", result.0, result.1);
 }
 
 fn redistribute(banks: &mut Vec<i32>) {
@@ -30,22 +31,25 @@ fn redistribute(banks: &mut Vec<i32>) {
     }
 }
 
-fn redistribution_cycles(banks: &mut Vec<i32>) -> usize {
-    let mut seen_states = HashSet::new();
-    seen_states.insert(banks.clone());
+fn redistribution_cycles(banks: &mut Vec<i32>) -> (usize, usize) {
+    let mut seen_states = HashMap::new();
+    let mut loop_count: usize = 0;
+    seen_states.insert(banks.clone(), loop_count);
 
     loop {
         redistribute(banks);
-        if seen_states.insert(banks.clone()) == false {
-            break;
+        loop_count += 1;
+        if let Some(&seen_at_loop) = seen_states.get(banks) {
+            return (seen_states.len(), loop_count - seen_at_loop);
+        }
+        else {
+            seen_states.insert(banks.clone(), loop_count);
         }
     }
-
-    seen_states.len()
 }
 
 #[test]
 fn test_example() {
     let mut banks = vec![0, 2, 7, 0];
-    assert_eq!(redistribution_cycles(&mut banks), 5);
+    assert_eq!(redistribution_cycles(&mut banks), (5, 4));
 }
