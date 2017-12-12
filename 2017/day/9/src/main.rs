@@ -11,7 +11,9 @@ enum Flags {
 }
 
 #[derive(Debug)]
-struct State {
+pub struct State {
+    pub score: usize,
+    pub garbage_count: usize,
     group_depth: usize,
     flags: Flags,
 }
@@ -21,38 +23,34 @@ fn main() {
     let reader = BufReader::new(file);
 
     let (score, garbage_count) = stream(reader);
-    println!("{}", score);
-    println!("{}", garbage_count);
+    println!("Part 1 (score): {}", score);
+    println!("Part 2 (garbage count): {}", garbage_count);
 }
 
 fn stream<R>(reader: R) -> (usize, usize) where R: Read {
-    let mut state = State { group_depth: 0, flags: Flags::Normal };
-    let mut score = 0;
-    let mut garbage_count = 0;
+    let state = reader.bytes()
+        .map(|byte| byte.ok().and_then(|b| char::from_u32(b as u32)))
+        .fold(State { group_depth: 0, score: 0, garbage_count: 0, flags: Flags::Normal }, next_state);
 
-    for byte in reader.bytes() {
-        state = match (state.flags, byte.ok().and_then(|b| char::from_u32(b as u32))) {
-            (Flags::CancelNext, _)          => State { group_depth: state.group_depth, flags: Flags::Normal },
-            (Flags::CancelNextInGarbage, _) => State { group_depth: state.group_depth, flags: Flags::InGarbage },
-            (Flags::Normal, Some('{'))      => State { group_depth: state.group_depth + 1, flags: Flags::Normal },
-            (Flags::Normal, Some('}'))      => {
-                score += state.group_depth;
-                State { group_depth: state.group_depth - 1, flags: Flags::Normal }
-            },
-            (Flags::Normal, Some('<'))      => State { group_depth: state.group_depth, flags: Flags::InGarbage },
-            (Flags::InGarbage, Some('>'))   => State { group_depth: state.group_depth, flags: Flags::Normal },
-            (Flags::InGarbage, Some('!'))   => State { group_depth: state.group_depth, flags: Flags::CancelNextInGarbage },
-            (Flags::InGarbage, Some(_))     => {
-                garbage_count += 1;
-                State { group_depth: state.group_depth, flags: Flags::InGarbage }
-            },
-            (Flags::Normal, Some('!'))      => State { group_depth: state.group_depth, flags: Flags::CancelNext },
-            (_, Some(_))                    => state,
-            (_, None)                       => panic!("error reading/converting byte")
-        };
+    (state.score, state.garbage_count)
+}
+
+fn next_state(state: State, chr: Option<char>) -> State {
+    use Flags::*;
+
+    match (state.flags, chr) {
+        (CancelNext, _)          => State { score: state.score, garbage_count: state.garbage_count, group_depth: state.group_depth, flags: Normal },
+        (CancelNextInGarbage, _) => State { score: state.score, garbage_count: state.garbage_count, group_depth: state.group_depth, flags: InGarbage },
+        (Normal, Some('{'))      => State { score: state.score, garbage_count: state.garbage_count, group_depth: state.group_depth + 1, flags: Normal },
+        (Normal, Some('}'))      => State { score: state.score + state.group_depth, garbage_count: state.garbage_count, group_depth: state.group_depth - 1, flags: Normal },
+        (Normal, Some('<'))      => State { score: state.score, garbage_count: state.garbage_count, group_depth: state.group_depth, flags: InGarbage },
+        (InGarbage, Some('>'))   => State { score: state.score, garbage_count: state.garbage_count, group_depth: state.group_depth, flags: Normal },
+        (InGarbage, Some('!'))   => State { score: state.score, garbage_count: state.garbage_count, group_depth: state.group_depth, flags: CancelNextInGarbage },
+        (InGarbage, Some(_))     => State { score: state.score, garbage_count: state.garbage_count + 1, group_depth: state.group_depth, flags: InGarbage },
+        (Normal, Some('!'))      => State { score: state.score, garbage_count: state.garbage_count, group_depth: state.group_depth, flags: CancelNext },
+        (_, Some(_))             => state,
+        (_, None)                => panic!("error reading/converting byte")
     }
-
-    (score, garbage_count)
 }
 
 // {}, score of 1.
