@@ -86,18 +86,22 @@ fn main() {
 
     let diagram = Diagram::new(input);
 
-    println!("{}", navigate(&diagram));
+    let (steps, path) = navigate(&diagram);
+
+    println!("{} in {} steps", path, steps);
 }
 
 // This is pretty ugly... can be improved
-fn navigate(diagram: &Diagram) -> String {
+fn navigate(diagram: &Diagram) -> (usize, String) {
     let mut col = diagram.start_col();
     let mut row = 0;
     let mut direction = Down;
 
     let mut path = String::new();
+    let mut steps = 0;
 
     loop {
+        steps += 1;
         let c = diagram.char_at(row, col);
         // println!("Visit ({}, {}): '{}'", col, row, c);
 
@@ -139,7 +143,7 @@ fn navigate(diagram: &Diagram) -> String {
         break;
     }
 
-    path
+    (steps, path)
 }
 
 #[test]
@@ -153,5 +157,5 @@ let data = b"     |
                 ";
     let diagram = Diagram::new(data.to_vec());
 
-    assert_eq!(navigate(&diagram), "ABCDEF".to_string())
+    assert_eq!(navigate(&diagram), (38, "ABCDEF".to_string()))
 }
