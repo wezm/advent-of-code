@@ -20,15 +20,38 @@ fn main() {
         programs.push(linked);
     }
 
-    println!("{}", reachable(&programs));
+    println!("{}", reachable(0, &programs).len());
+    println!("{}", groups(&programs));
 }
 
-fn reachable(list: &Vec<Vec<usize>>) -> usize {
+// This isn't real pretty but it works
+fn groups(list: &Vec<Vec<usize>>) -> usize {
+    let mut groups = 0;
+    let mut to_visit = HashSet::with_capacity(list.len());
+
+    for idx in 0..list.len() {
+        to_visit.insert(idx);
+    }
+
+    while !to_visit.is_empty() {
+        let group = reachable(*to_visit.iter().next().unwrap(), list);
+        let mut new_to_visit = HashSet::new();
+        for idx in to_visit.difference(&group) {
+            new_to_visit.insert(*idx);
+        }
+        to_visit = new_to_visit;
+        groups += 1
+    }
+
+    groups
+}
+
+fn reachable(from: usize, list: &Vec<Vec<usize>>) -> HashSet<usize> {
     let mut visited = HashSet::new();
 
-    visit(0, &mut visited, list);
+    visit(from, &mut visited, list);
 
-    visited.len()
+    visited
 }
 
 fn visit(pid: usize, visited: &mut HashSet<usize>, list: &Vec<Vec<usize>>) {
