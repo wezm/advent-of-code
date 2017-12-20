@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::Read;
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 struct Point {
     x: isize,
     y: isize,
@@ -22,7 +22,7 @@ impl Point {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 struct Particle {
     position: Point,
     velocity: Point,
@@ -36,6 +36,27 @@ impl Particle {
             velocity: Point::new(vx, vy, vz),
             acceleration: Point::new(ax, ay, az),
         }
+    }
+
+
+    fn tick(&mut self) {
+        // Increase the X velocity by the X acceleration.
+        // Increase the Y velocity by the Y acceleration.
+        // Increase the Z velocity by the Z acceleration.
+        self.velocity.x += self.acceleration.x;
+        self.velocity.y += self.acceleration.y;
+        self.velocity.z += self.acceleration.z;
+
+        // Increase the X position by the X velocity.
+        // Increase the Y position by the Y velocity.
+        // Increase the Z position by the Z velocity.
+        self.position.x += self.velocity.x;
+        self.position.y += self.velocity.y;
+        self.position.z += self.velocity.z;
+    }
+
+    fn distance(&self) -> usize {
+        (self.position.x.abs() + self.position.y.abs() + self.position.z.abs()) as usize
     }
 }
 
@@ -52,9 +73,14 @@ fn main() {
     let mut particles = Vec::new();
     for cap in re.captures_iter(&input) {
         let particle = Particle::new(&cap[1], &cap[2], &cap[3], &cap[4], &cap[5], &cap[6], &cap[7], &cap[8], &cap[9]);
-        println!("{:?}", particle);
         particles.push(particle);
     }
+
+    println!("{:?}", closest_to_zero(&particles));
+}
+
+fn closest_to_zero(particles: &Vec<Particle>) -> Particle {
+    particles[0].clone()
 }
 
 #[test]
