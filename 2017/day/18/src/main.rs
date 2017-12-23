@@ -2,6 +2,10 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::str::FromStr;
 use std::collections::HashMap;
+use std::sync::mpsc::{channel, Sender, Receiver, RecvTimeoutError};
+use std::thread;
+use std::sync::Arc;
+use std::time::Duration;
 
 type Register = char;
 
@@ -78,32 +82,36 @@ impl Program {
 // TODO: Machine executes programs and instructions
 #[derive(Debug)]
 struct Machine {
+    pid: usize,
     registers: HashMap<char, isize>,
     pc: isize,
-    last_played: isize,
-    last_received: isize,
+    send_count: usize,
 }
 
 impl Machine {
-    pub fn new() -> Machine {
+    pub fn new(pid: usize) -> Machine {
+        let mut registers = HashMap::new();
+        registers.insert('p', pid as isize);
+
         Machine {
-            registers: HashMap::new(),
+            pid,
+            registers,
             pc: 0,
-            last_played: 0,
-            last_received: 0,
+            send_count: 0,
         }
     }
 
-    pub fn run(&mut self, program: &Program) {
+    pub fn run(&mut self, program: &Program, send: Sender<isize>, recv: Receiver<isize>) {
         loop {
             if self.pc < 0 || self.pc >= program.0.len() as isize {
+                println!("pid {}: send_count = {}", self.pid, self.send_count);
                 break;
             }
 
             let instruction = &program.0[self.pc as usize];
-            self.execute(instruction);
-
-            if self.last_received != 0 {
+            // println!("pid {}: {:?}", self.pid, instruction);
+            if let Err(_err) = self.execute(instruction, &send, &recv) {
+                println!("pid {}: send_count = {}", self.pid, self.send_count);
                 break;
             }
         }
@@ -117,15 +125,10 @@ impl Machine {
         self.registers.insert(register, value);
     }
 
-    fn execute(&mut self, instruction: &Instruction) {
+    fn execute(&mut self, instruction: &Instruction, send: &Sender<isize>, recv: &Receiver<isize>) -> Result<(), RecvTimeoutError> {
         use Instruction::*;
 
-        // TODO; Increment pc
-
         match *instruction {
-            Snd(ref op) => {
-                self.last_played = op.value(self);
-            }
             Set(Operand::Register(reg), ref val) => {
                 let value = val.value(self);
                 self.set(reg, value);
@@ -145,11 +148,16 @@ impl Machine {
                 let value = val.value(self);
                 self.set(reg, reg_value % value);
             }
-            Rcv(ref op) => {
+            Snd(ref op) => {
                 let value = op.value(self);
-                if value != 0 {
-                    self.last_received = self.last_played;
-                }
+                send.send(value).expect("error sending");
+                self.send_count += 1;
+                // println!("pid {}: sent {}", self.pid, value);
+            }
+            Rcv(Operand::Register(reg)) => {
+                let value = recv.recv_timeout(Duration::from_secs(5))?;
+                // println!("pid {}: recv {}", self.pid, value);
+                self.set(reg, value);
             }
             Jgz(_, _) => { /* handled below */ }
             _ => panic!("bad argument")
@@ -161,7 +169,7 @@ impl Machine {
                 let x_value = x.value(self);
                 let offset_value = offset.value(self);
 
-                if x_value != 0 {
+                if x_value > 0 {
                     self.pc += offset_value;
                 }
                 else {
@@ -170,14 +178,49 @@ impl Machine {
             }
             _ => self.pc += 1
         };
+
+        Ok(())
     }
 }
 
+fn run(program: Program) {
+    let program = Arc::new(program);
+    let mut machine0 = Machine::new(0);
+    let mut machine1 = Machine::new(1);
+
+    let (send0, recv1) = channel();
+    let (send1, recv0) = channel();
+
+    let program0 = Arc::clone(&program);
+    let thread0 = thread::spawn(move || {
+        machine0.run(&program0, send0, recv0);
+    });
+
+    let program1 = Arc::clone(&program);
+    let thread1 = thread::spawn(move || {
+        machine1.run(&program1, send1, recv1);
+    });
+
+    thread0.join().unwrap();
+    thread1.join().unwrap();
+}
+
 fn main() {
-    let program = Program::load("input");
-    let mut machine = Machine::new();
+    run(Program::load("input"));
+}
 
-    machine.run(&program);
+#[test]
+fn test_part_two() {
+    let input = r"snd 1
+snd 2
+snd p
+rcv a
+rcv b
+rcv c
+rcv d";
 
-    println!("{:?}", machine);
+    let program = input.lines()
+        .map(|line| Instruction::new(line.as_ref()))
+        .collect::<Vec<Instruction>>();
+    run(Program(program));
 }
