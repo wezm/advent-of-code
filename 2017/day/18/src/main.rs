@@ -27,7 +27,6 @@ impl Operand {
 
     fn value(&self, machine: &Machine) -> isize {
         match *self {
-            // TODO: Sdd a get to Machine
             Operand::Register(ref reg) => machine.registers.get(reg).map(|val| *val).unwrap_or(0),
             Operand::Immediate(val) => val,
         }
@@ -79,7 +78,6 @@ impl Program {
     }
 }
 
-// TODO: Machine executes programs and instructions
 #[derive(Debug)]
 struct Machine {
     pid: usize,
