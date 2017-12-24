@@ -1,5 +1,8 @@
+use std::collections::HashMap;
+
 fn main() {
     println!("{}", manhattan_distance(289326));
+    println!("{}", stress_test(289326));
 }
 
 fn spiral_to(index: usize) -> (isize, isize) {
@@ -27,7 +30,55 @@ fn spiral_to(index: usize) -> (isize, isize) {
         edge += 1;
         delta *= -1;
     }
+}
 
+fn sum_neighbors(x: isize, y: isize, data: &HashMap<(isize, isize), usize>) -> usize {
+    let mut sum = 0;
+
+    for dx in -1..2 {
+        for dy in -1..2 {
+            if dx == 0 && dy == 0 { continue }
+
+            if let Some(value) = data.get(&(x + dx, y + dy)) {
+                sum += value;
+            }
+        }
+    }
+
+    sum
+}
+
+fn stress_test(input: usize) -> usize {
+    if input == 1 { return 2 }
+
+    let mut data = HashMap::new();
+    data.insert((0, 0), 1);
+
+    let mut x = 0isize;
+    let mut y = 0isize;
+    let mut edge = 1;
+    let mut delta = 1isize;
+
+    loop {
+        // Horizontal
+        for _i in 0..edge {
+            x += delta;
+            let value = sum_neighbors(x, y, &data);
+            if value > input { return value }
+            data.insert((x, y), value);
+        }
+
+        // Vertical
+        for _i in 0..edge {
+            y += delta;
+            let value = sum_neighbors(x, y, &data);
+            if value > input { return value }
+            data.insert((x, y), value);
+        }
+
+        edge += 1;
+        delta *= -1;
+    }
 }
 
 fn manhattan_distance(index: usize) -> usize {
@@ -102,4 +153,9 @@ fn test_example11() {
 #[test]
 fn test_example12() {
     assert_eq!(manhattan_distance(37), 6);
+}
+
+#[test]
+fn test_example1_part2() {
+    assert_eq!(stress_test(23), 25);
 }
