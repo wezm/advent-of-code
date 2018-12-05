@@ -1,8 +1,8 @@
-use std::io::{self, BufRead, BufReader};
+use std::io::{BufRead, BufReader};
 use std::fs::{self, File};
 use std::collections::HashSet;
 
-const INPUT: &str = "input/2018/day1.txt";
+const INPUT: &str = "input/day1.txt";
 
 fn main() {
     part1();

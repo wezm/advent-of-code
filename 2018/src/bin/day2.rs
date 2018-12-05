@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 
 fn main() {
-    let input = fs::read_to_string("input/2018/day2.txt").expect("input");
+    let input = fs::read_to_string("input/day2.txt").expect("input");
     part1(&input);
     part2(&input);
 }
@@ -44,7 +44,7 @@ fn part2(input: &str) {
                     |acc, (chr1, chr2)| if chr1 != chr2 { acc + 1 } else { acc },
                 );
 
-            if (number_differing == 1) {
+            if number_differing == 1 {
                 println!("{} and {} differ by 1 char", line, other);
                 let common: String = line
                     .chars()

@@ -22,7 +22,7 @@ struct Claim {
 }
 
 fn main() {
-    let input = fs::read_to_string("input/2018/day3.txt").expect("input");
+    let input = fs::read_to_string("input/day3.txt").expect("input");
 
     let claims = input
         .lines()
