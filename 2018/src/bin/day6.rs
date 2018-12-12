@@ -119,6 +119,7 @@ fn main() {
         .expect("error parsing input");
 
     part1(&coordinates);
+    part2(&coordinates);
 }
 
 fn part1(coordinates: &[Coordinate]) {
@@ -133,6 +134,30 @@ fn part1(coordinates: &[Coordinate]) {
     // Find the one with the most claimed area
     let area = grid.largest_claimed_area();
     println!("Part 1 = {}", area);
+}
+
+fn part2(coordinates: &[Coordinate]) {
+    // For each location calculate the distance to each coordinate. If that's less than 10,000 the
+    // it's part of "the region", count it.
+    let max = furthest_coord(coordinates);
+    let mut count_in_region = 0;
+
+    for y in 0..max.y {
+        for x in 0..max.x {
+            let current_location = Coordinate { x, y };
+            // Sum distance to all the coordinates
+            let sum = coordinates
+                .iter()
+                .map(|coord| current_location.distance_to(coord))
+                .sum::<u32>();
+
+            if sum < 10000 {
+                count_in_region += 1;
+            }
+        }
+    }
+
+    println!("Part 2 = {}", count_in_region);
 }
 
 fn furthest_coord(coordinates: &[Coordinate]) -> Coordinate {
