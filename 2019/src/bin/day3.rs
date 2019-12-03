@@ -34,6 +34,19 @@ fn main() -> io::Result<()> {
         .unwrap();
     println!("Part 1: {}", result);
 
+    // Part 2, count steps (length of path)
+    // For each common point find it's position in each wire paths, that is the steps
+    let result = wire1
+        .intersection(&wire2)
+        .map(|point| {
+            paths[0].iter().position(|other| point == other).unwrap()
+                + paths[1].iter().position(|other| other == point).unwrap()
+                + 2 // to account for 0 based index
+        })
+        .min()
+        .unwrap();
+    println!("Part 2: {}", result);
+
     Ok(())
 }
 
