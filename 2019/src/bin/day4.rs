@@ -11,21 +11,46 @@ const INPUT: RangeInclusive<u32> = 356261..=846303;
 //   (like 111123 or 135679).
 
 fn main() {
-    let count = INPUT.filter(meets_criteria).count();
-    println!("Part 1: {}", count);
+    println!("Part 1: {}", INPUT.filter(meets_criteria_part1).count());
+    println!("Part 2: {}", INPUT.filter(meets_criteria_part2).count());
 }
 
-fn meets_criteria(number: &u32) -> bool {
-    let mut number = *number;
-    let mut digits = [0; 6];
-    digits.iter_mut().rev().for_each(|digit| {
-        *digit = number % 10;
-        number /= 10;
-    });
+fn meets_criteria_part1(number: &u32) -> bool {
+    let digits = number_to_digits(*number);
 
     // adjacent digits and increasing digits
     digits.windows(2).any(|pair| pair[0] == pair[1])
         && digits.windows(2).all(|pair| pair[1] >= pair[0])
+}
+
+fn meets_criteria_part2(number: &u32) -> bool {
+    let digits = number_to_digits(*number);
+
+    // Group by digits
+    let mut chunks: Vec<Vec<_>> = vec![];
+    let mut prev = None;
+    for &digit in &digits {
+        if Some(digit) == prev {
+            chunks.last_mut().unwrap().push(digit)
+        } else {
+            chunks.push(vec![digit])
+        }
+
+        prev = Some(digit)
+    }
+
+    // check if any double digits are present
+    chunks.iter().any(|chunk| chunk.len() == 2) && digits.windows(2).all(|pair| pair[1] >= pair[0])
+}
+
+fn number_to_digits(mut number: u32) -> [u8; 6] {
+    let mut digits = [0; 6];
+    digits.iter_mut().rev().for_each(|digit| {
+        *digit = (number % 10) as u8;
+        number /= 10;
+    });
+
+    digits
 }
 
 #[cfg(test)]
@@ -33,10 +58,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_meets_criteria() {
-        assert!(meets_criteria(&111123));
-        assert!(meets_criteria(&135669));
-        assert!(!meets_criteria(&223450));
-        assert!(!meets_criteria(&123789));
+    fn test_meets_criteria_part1() {
+        assert!(meets_criteria_part1(&111123));
+        assert!(meets_criteria_part1(&135669));
+        assert!(!meets_criteria_part1(&223450));
+        assert!(!meets_criteria_part1(&123789));
+    }
+
+    #[test]
+    fn test_meets_criteria_part2() {
+        assert!(meets_criteria_part2(&112233));
+        assert!(!meets_criteria_part2(&123444));
+        assert!(meets_criteria_part2(&111122));
     }
 }
