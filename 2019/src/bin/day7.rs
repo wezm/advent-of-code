@@ -25,9 +25,9 @@ fn part1(data: Vec<i32>) {
             let mut output = 0;
             for phase_setting in settings.iter() {
                 let input = vec![output, *phase_setting];
-                let mut computer = computer::Computer::new(data.clone(), input);
+                let mut computer = computer::Computer::new(data.clone(), input, vec![]);
                 computer.run(None, None);
-                output = computer.output()[0];
+                output = computer.output();
             }
             output
         })

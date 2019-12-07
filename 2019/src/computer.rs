@@ -19,10 +19,36 @@ enum Mode {
     Address,
 }
 
-pub struct Computer {
+pub struct Computer<I: Input, O: Output> {
     memory: Vec<i32>,
-    input: Vec<i32>,
-    output: Vec<i32>,
+    input: I,
+    output: O,
+}
+
+pub trait Input {
+    fn read(&mut self) -> Option<i32>;
+}
+
+pub trait Output {
+    fn write(&mut self, value: i32);
+
+    fn last_value(&self) -> i32;
+}
+
+impl Input for Vec<i32> {
+    fn read(&mut self) -> Option<i32> {
+        self.pop()
+    }
+}
+
+impl Output for Vec<i32> {
+    fn write(&mut self, value: i32) {
+        self.push(value)
+    }
+
+    fn last_value(&self) -> i32 {
+        *self.last().unwrap()
+    }
 }
 
 fn decode(mut instruction: i32) -> Instruction {
@@ -64,12 +90,12 @@ fn decode(mut instruction: i32) -> Instruction {
     }
 }
 
-impl Computer {
-    pub fn new(memory: Vec<i32>, input: Vec<i32>) -> Self {
+impl<I, O> Computer<I, O> where I: Input, O: Output {
+    pub fn new(memory: Vec<i32>, input: I, output: O) -> Self {
         Computer {
             memory,
             input,
-            output: vec![],
+            output,
         }
     }
 
@@ -106,12 +132,12 @@ impl Computer {
                     ip += 4;
                 }
                 Instruction::Input => {
-                    let value = self.input.pop().expect("no more input");
+                    let value = self.input.read().expect("no more input");
                     self.write(self.read(ip + 1, Mode::Immediate), value);
                     ip += 2;
                 }
                 Instruction::Output(mode) => {
-                    self.output.push(self.read(ip + 1, mode));
+                    self.output.write(self.read(ip + 1, mode));
                     ip += 2;
                 }
                 Instruction::JumpIfTrue(mode1, mode2) => {
@@ -149,8 +175,8 @@ impl Computer {
         }
     }
 
-    pub fn output(&self) -> &[i32] {
-        &self.output
+    pub fn output(&self) -> i32 {
+        self.output.last_value()
     }
 }
 
