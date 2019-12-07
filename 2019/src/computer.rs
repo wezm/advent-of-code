@@ -10,6 +10,10 @@ enum Instruction {
     Multiply(Mode, Mode),
     Input,
     Output(Mode),
+    JumpIfTrue(Mode, Mode),
+    JumpIfFalse(Mode, Mode),
+    LessThan(Mode, Mode),
+    Equals(Mode, Mode),
     Halt,
 }
 
@@ -41,6 +45,22 @@ fn decode(mut instruction: i32) -> Instruction {
         ),
         3 => Instruction::Input,
         4 => Instruction::Output(Mode::from(divmod(&mut instruction, 10))),
+        5 => Instruction::JumpIfTrue(
+            Mode::from(divmod(&mut instruction, 10)),
+            Mode::from(divmod(&mut instruction, 10)),
+        ),
+        6 => Instruction::JumpIfFalse(
+            Mode::from(divmod(&mut instruction, 10)),
+            Mode::from(divmod(&mut instruction, 10)),
+        ),
+        7 => Instruction::LessThan(
+            Mode::from(divmod(&mut instruction, 10)),
+            Mode::from(divmod(&mut instruction, 10)),
+        ),
+        8 => Instruction::Equals(
+            Mode::from(divmod(&mut instruction, 10)),
+            Mode::from(divmod(&mut instruction, 10)),
+        ),
         99 => Instruction::Halt,
         _ => panic!("Invalid opcode: {}", opcode),
     }
@@ -100,6 +120,36 @@ impl<'a> Memory<'a> {
                     let value = self.read(ip + 1, mode);
                     println!("{}", value);
                     ip += 2;
+                }
+                Instruction::JumpIfTrue(mode1, mode2) => {
+                    if self.read(ip + 1, mode1) != 0 {
+                        ip = self.read(ip + 2, mode2);
+                    } else {
+                        ip += 3;
+                    }
+                }
+                Instruction::JumpIfFalse(mode1, mode2) => {
+                    if self.read(ip + 1, mode1) == 0 {
+                        ip = self.read(ip + 2, mode2);
+                    } else {
+                        ip += 3;
+                    }
+                }
+                Instruction::LessThan(mode1, mode2) => {
+                    if self.read(ip + 1, mode1) < self.read(ip + 2, mode2) {
+                        self.write(self.read(ip + 3, Mode::Immediate), 1);
+                    } else {
+                        self.write(self.read(ip + 3, Mode::Immediate), 0);
+                    }
+                    ip += 4;
+                }
+                Instruction::Equals(mode1, mode2) => {
+                    if self.read(ip + 1, mode1) == self.read(ip + 2, mode2) {
+                        self.write(self.read(ip + 3, Mode::Immediate), 1);
+                    } else {
+                        self.write(self.read(ip + 3, Mode::Immediate), 0);
+                    }
+                    ip += 4;
                 }
                 Instruction::Halt => break,
             }
