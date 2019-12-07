@@ -1,3 +1,4 @@
+use advent_of_code::number_to_digits;
 use std::ops::RangeInclusive;
 
 const INPUT: RangeInclusive<u32> = 356261..=846303;
@@ -41,16 +42,6 @@ fn meets_criteria_part2(number: &u32) -> bool {
 
     // check if any double digits are present
     chunks.iter().any(|chunk| chunk.len() == 2) && digits.windows(2).all(|pair| pair[1] >= pair[0])
-}
-
-fn number_to_digits(mut number: u32) -> [u8; 6] {
-    let mut digits = [0; 6];
-    digits.iter_mut().rev().for_each(|digit| {
-        *digit = (number % 10) as u8;
-        number /= 10;
-    });
-
-    digits
 }
 
 #[cfg(test)]

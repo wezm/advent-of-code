@@ -188,7 +188,7 @@ mod tests {
     fn test_day2() {
         let input = fs::read_to_string("input/day2.txt").unwrap();
         let mut data = input::read_separated_line(',', &input).unwrap();
-        let mut program = Computer::new(&mut data);
+        let mut program = Computer::new(&mut data, vec![]);
 
         // Check that day2 still works wirh run through this implementation
         program.run(Some(12), Some(2));
