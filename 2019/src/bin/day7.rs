@@ -8,14 +8,24 @@ fn main() -> io::Result<()> {
     let source = fs::read_to_string("input/day7.txt")?;
     let data = input::read_separated_line(',', &source)?;
 
-    let max = phase_settings()
+    part1(data.clone());
+    //    part2(data);
+
+    Ok(())
+}
+
+fn part1(data: Vec<i32>) {
+    let mut elements = [0i32; AMPLIFIERS];
+    for i in 0i32..=4 {
+        elements[i as usize] = i;
+    }
+    let max = phase_settings(elements)
         .iter()
         .map(|settings| {
             let mut output = 0;
             for phase_setting in settings.iter() {
                 let input = vec![output, *phase_setting];
-                let mut program = data.clone();
-                let mut computer = computer::Computer::new(&mut program, input);
+                let mut computer = computer::Computer::new(data.clone(), input);
                 computer.run(None, None);
                 output = computer.output()[0];
             }
@@ -24,17 +34,20 @@ fn main() -> io::Result<()> {
         .max()
         .unwrap();
     println!("Part 1: {}", max);
-
-    Ok(())
 }
 
-fn phase_settings() -> Vec<[i32; AMPLIFIERS]> {
+fn part2(data: Vec<i32>) {
+    let mut elements = [0i32; AMPLIFIERS];
+    for i in 5i32..=9 {
+        elements[i as usize - 5] = i;
+    }
+
+    // println!("Part 2: {}", max);
+}
+
+fn phase_settings(mut elements: [i32; AMPLIFIERS]) -> Vec<[i32; AMPLIFIERS]> {
     let mut permutations = Vec::new();
     let mut indexes = [0i32; AMPLIFIERS];
-    let mut elements = [0i32; AMPLIFIERS];
-    for i in 0i32..=4 {
-        elements[i as usize] = i;
-    }
 
     permutations.push(elements);
 

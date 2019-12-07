@@ -19,8 +19,8 @@ enum Mode {
     Address,
 }
 
-pub struct Computer<'a> {
-    memory: &'a mut [i32],
+pub struct Computer {
+    memory: Vec<i32>,
     input: Vec<i32>,
     output: Vec<i32>,
 }
@@ -64,8 +64,8 @@ fn decode(mut instruction: i32) -> Instruction {
     }
 }
 
-impl<'a> Computer<'a> {
-    pub fn new(memory: &'a mut [i32], input: Vec<i32>) -> Self {
+impl Computer {
+    pub fn new(memory: Vec<i32>, input: Vec<i32>) -> Self {
         Computer {
             memory,
             input,
