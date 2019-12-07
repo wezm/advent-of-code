@@ -23,7 +23,7 @@ enum Mode {
     Address,
 }
 
-pub struct Memory<'a> {
+pub struct Computer<'a> {
     mem: &'a mut [i32],
 }
 
@@ -66,9 +66,9 @@ fn decode(mut instruction: i32) -> Instruction {
     }
 }
 
-impl<'a> Memory<'a> {
+impl<'a> Computer<'a> {
     pub fn new(mem: &'a mut [i32]) -> Self {
-        Memory { mem }
+        Computer { mem }
     }
 
     fn read(&self, value: i32, mode: Mode) -> i32 {
@@ -191,7 +191,7 @@ mod tests {
     fn test_day2() {
         let input = fs::read_to_string("input/day2.txt").unwrap();
         let mut data = input::read_separated_line(',', &input).unwrap();
-        let mut program = Memory::new(&mut data);
+        let mut program = Computer::new(&mut data);
 
         // Check that day2 still works wirh run through this implementation
         program.run(Some(12), Some(2));
