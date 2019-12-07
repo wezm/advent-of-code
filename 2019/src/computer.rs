@@ -1,10 +1,14 @@
+use std::io;
+use std::io::Write;
+use std::str::FromStr;
+
 type Address = i32;
 
 #[derive(Debug, Eq, PartialEq)]
 enum Instruction {
     Add(Mode, Mode),
     Multiply(Mode, Mode),
-    Input(Mode),
+    Input,
     Output(Mode),
     Halt,
 }
@@ -15,7 +19,7 @@ enum Mode {
     Address,
 }
 
-struct Memory<'a> {
+pub struct Memory<'a> {
     mem: &'a mut [i32],
 }
 
@@ -35,7 +39,7 @@ fn decode(mut instruction: i32) -> Instruction {
             Mode::from(divmod(&mut instruction, 10)),
             Mode::from(divmod(&mut instruction, 10)),
         ),
-        3 => Instruction::Input(Mode::from(divmod(&mut instruction, 10))),
+        3 => Instruction::Input,
         4 => Instruction::Output(Mode::from(divmod(&mut instruction, 10))),
         99 => Instruction::Halt,
         _ => panic!("Invalid opcode: {}", opcode),
@@ -47,10 +51,10 @@ impl<'a> Memory<'a> {
         Memory { mem }
     }
 
-    pub fn read(&self, value: i32, mode: Mode) -> i32 {
+    fn read(&self, value: i32, mode: Mode) -> i32 {
         match mode {
-            Mode::Immediate => value,
-            Mode::Address => self.mem[value as usize],
+            Mode::Immediate => self.mem[value as usize],
+            Mode::Address => self.mem[self.mem[value as usize] as usize],
         }
     }
 
@@ -58,27 +62,43 @@ impl<'a> Memory<'a> {
         self.mem[address as usize] = value;
     }
 
-    fn run(&mut self, noun: i32, verb: i32) {
-        self.write(1, noun);
-        self.write(2, verb);
+    pub fn run(&mut self, noun: Option<i32>, verb: Option<i32>) {
+        if let Some(noun) = noun {
+            self.write(1, noun);
+        }
+        if let Some(verb) = verb {
+            self.write(2, verb);
+        }
         let mut ip = 0; // instruction pointer
 
         loop {
-            match decode(self.read(ip, Mode::Address)) {
+            match decode(self.read(ip, Mode::Immediate)) {
                 Instruction::Add(mode1, mode2) => {
-                    let result = self.read(ip + 1, mode1) + self.read(ip + 1, mode2);
-                    self.write(ip + 3, result);
+                    let result = self.read(ip + 1, mode1) + self.read(ip + 2, mode2);
+                    self.write(self.read(ip + 3, Mode::Immediate), result);
                     ip += 4;
                 }
                 Instruction::Multiply(mode1, mode2) => {
-                    let result = self.read(ip + 1, mode1) * self.read(ip + 1, mode2);
-                    self.write(ip + 3, result);
+                    let result = self.read(ip + 1, mode1) * self.read(ip + 2, mode2);
+                    self.write(self.read(ip + 3, Mode::Immediate), result);
                     ip += 4;
                 }
-                Instruction::Input(mode) => {
+                Instruction::Input => {
+                    let mut input = String::new();
+                    print!("Input integer: ");
+                    io::stdout().flush().unwrap();
+                    match io::stdin().read_line(&mut input) {
+                        Ok(_) => {
+                            let integer = i32::from_str(input.trim()).expect("invalid integer");
+                            self.write(self.read(ip + 1, Mode::Immediate), integer);
+                        }
+                        Err(error) => panic!("error: {}", error),
+                    }
                     ip += 2;
                 }
                 Instruction::Output(mode) => {
+                    let value = self.read(ip + 1, mode);
+                    println!("{}", value);
                     ip += 2;
                 }
                 Instruction::Halt => break,
@@ -117,13 +137,14 @@ mod tests {
         )
     }
 
+    #[test]
     fn test_day2() {
         let input = fs::read_to_string("input/day2.txt").unwrap();
         let mut data = input::read_separated_line(',', &input).unwrap();
         let mut program = Memory::new(&mut data);
 
         // Check that day2 still works wirh run through this implementation
-        program.run(12, 2);
-        assert_eq!(program.read(0, Mode::Address), 4138658);
+        program.run(Some(12), Some(2));
+        assert_eq!(program.read(0, Mode::Immediate), 4138658);
     }
 }
