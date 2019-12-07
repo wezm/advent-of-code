@@ -29,6 +29,14 @@ fn parse_input(input: &str) -> Vec<Orbit<'_>> {
 }
 
 fn number_of_orbits(input: &[Orbit<'_>]) -> usize {
+    let nodes = build_tree(input);
+    // Now traverse the node and sum the orbits of each one
+    (0..nodes.len())
+        .map(|index| count_orbits(&nodes, index, 0))
+        .sum()
+}
+
+fn build_tree<'a>(input: &'a [Orbit<'a>]) -> Vec<Node<'a>> {
     // Build the tree from the input
     let mut nodes: Vec<Node<'_>> = Vec::with_capacity(input.len());
 
@@ -65,10 +73,7 @@ fn number_of_orbits(input: &[Orbit<'_>]) -> usize {
             });
     }
 
-    // Now traverse the node and sum the orbits of each one
-    (0..nodes.len())
-        .map(|index| count_orbits(&nodes, index, 0))
-        .sum()
+    nodes
 }
 
 fn count_orbits(nodes: &[Node], node_index: usize, count: usize) -> usize {
