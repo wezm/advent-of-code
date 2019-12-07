@@ -1,7 +1,3 @@
-use std::io;
-use std::io::Write;
-use std::str::FromStr;
-
 type Address = i32;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -24,7 +20,9 @@ enum Mode {
 }
 
 pub struct Computer<'a> {
-    mem: &'a mut [i32],
+    memory: &'a mut [i32],
+    input: Vec<i32>,
+    output: Vec<i32>,
 }
 
 fn decode(mut instruction: i32) -> Instruction {
@@ -67,19 +65,23 @@ fn decode(mut instruction: i32) -> Instruction {
 }
 
 impl<'a> Computer<'a> {
-    pub fn new(mem: &'a mut [i32]) -> Self {
-        Computer { mem }
+    pub fn new(memory: &'a mut [i32], input: Vec<i32>) -> Self {
+        Computer {
+            memory,
+            input,
+            output: vec![],
+        }
     }
 
     fn read(&self, value: i32, mode: Mode) -> i32 {
         match mode {
-            Mode::Immediate => self.mem[value as usize],
-            Mode::Address => self.mem[self.mem[value as usize] as usize],
+            Mode::Immediate => self.memory[value as usize],
+            Mode::Address => self.memory[self.memory[value as usize] as usize],
         }
     }
 
     fn write(&mut self, address: Address, value: i32) {
-        self.mem[address as usize] = value;
+        self.memory[address as usize] = value;
     }
 
     pub fn run(&mut self, noun: Option<i32>, verb: Option<i32>) {
@@ -104,21 +106,12 @@ impl<'a> Computer<'a> {
                     ip += 4;
                 }
                 Instruction::Input => {
-                    let mut input = String::new();
-                    print!("Input integer: ");
-                    io::stdout().flush().unwrap();
-                    match io::stdin().read_line(&mut input) {
-                        Ok(_) => {
-                            let integer = i32::from_str(input.trim()).expect("invalid integer");
-                            self.write(self.read(ip + 1, Mode::Immediate), integer);
-                        }
-                        Err(error) => panic!("error: {}", error),
-                    }
+                    let value = self.input.pop().expect("no more input");
+                    self.write(self.read(ip + 1, Mode::Immediate), value);
                     ip += 2;
                 }
                 Instruction::Output(mode) => {
-                    let value = self.read(ip + 1, mode);
-                    println!("{}", value);
+                    self.output.push(self.read(ip + 1, mode));
                     ip += 2;
                 }
                 Instruction::JumpIfTrue(mode1, mode2) => {
@@ -154,6 +147,10 @@ impl<'a> Computer<'a> {
                 Instruction::Halt => break,
             }
         }
+    }
+
+    pub fn output(&self) -> &[i32] {
+        &self.output
     }
 }
 
