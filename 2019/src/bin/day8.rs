@@ -18,9 +18,32 @@ fn main() -> io::Result<()> {
 
     println!("Part 1: {}", ones * twos);
 
+    let picture = composite(&layers);
+
+    for i in 0..(WIDTH * HEIGHT) {
+        if i % WIDTH == 0 {
+            println!();
+        }
+        let pixel = if picture[i] == '1' { '█' } else { ' ' };
+        print!("{}", pixel);
+    }
+    println!();
+
     Ok(())
 }
 
 fn count_digits(layer: &[char], digit: char) -> usize {
     layer.iter().filter(|&&c| c == digit).count()
+}
+
+fn composite(layers: &Vec<&[char]>) -> Vec<char> {
+    let mut image = Vec::with_capacity(WIDTH * HEIGHT);
+    // For each pixel go top to bottom finding the first non-transparent colour and add that to the
+    // final image.
+    for i in 0..(WIDTH * HEIGHT) {
+        let layer = layers.iter().find(|layer| layer[i] != '2').unwrap();
+        image.push(layer[i]);
+    }
+
+    image
 }
