@@ -1,3 +1,7 @@
+use std::cell::RefCell;
+use std::collections::VecDeque;
+use std::rc::Rc;
+
 type Address = i32;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -19,7 +23,20 @@ enum Mode {
     Address,
 }
 
+#[derive(Debug)]
+pub struct Pipe {
+    queue: VecDeque<i32>,
+    last: Option<i32>,
+}
+
+pub enum ComputeResult {
+    Halted,
+    NeedsInput,
+}
+
 pub struct Computer<I: Input, O: Output> {
+    name: char,
+    ip: i32,
     memory: Vec<i32>,
     input: I,
     output: O,
@@ -48,6 +65,24 @@ impl Output for Vec<i32> {
 
     fn last_value(&self) -> i32 {
         *self.last().unwrap()
+    }
+}
+
+impl Input for Rc<RefCell<Pipe>> {
+    fn read(&mut self) -> Option<i32> {
+        dbg!(self.borrow_mut().queue.pop_front())
+    }
+}
+
+impl Output for Rc<RefCell<Pipe>> {
+    fn write(&mut self, value: i32) {
+        let mut pipe = self.borrow_mut();
+        pipe.last = Some(value);
+        pipe.queue.push_back(value);
+    }
+
+    fn last_value(&self) -> i32 {
+        self.borrow().last.unwrap()
     }
 }
 
@@ -90,13 +125,23 @@ fn decode(mut instruction: i32) -> Instruction {
     }
 }
 
-impl<I, O> Computer<I, O> where I: Input, O: Output {
-    pub fn new(memory: Vec<i32>, input: I, output: O) -> Self {
+impl<I, O> Computer<I, O>
+where
+    I: Input,
+    O: Output,
+{
+    pub fn new(name: char, memory: Vec<i32>, input: I, output: O) -> Self {
         Computer {
+            name,
+            ip: 0,
             memory,
             input,
             output,
         }
+    }
+
+    pub fn name(&self) -> char {
+        self.name
     }
 
     fn read(&self, value: i32, mode: Mode) -> i32 {
@@ -110,73 +155,90 @@ impl<I, O> Computer<I, O> where I: Input, O: Output {
         self.memory[address as usize] = value;
     }
 
-    pub fn run(&mut self, noun: Option<i32>, verb: Option<i32>) {
+    pub fn run(&mut self, noun: Option<i32>, verb: Option<i32>) -> ComputeResult {
+        println!("{}: resume ip = {}", self.name, self.ip);
         if let Some(noun) = noun {
             self.write(1, noun);
         }
         if let Some(verb) = verb {
             self.write(2, verb);
         }
-        let mut ip = 0; // instruction pointer
 
         loop {
-            match decode(self.read(ip, Mode::Immediate)) {
+            match decode(self.read(self.ip, Mode::Immediate)) {
                 Instruction::Add(mode1, mode2) => {
-                    let result = self.read(ip + 1, mode1) + self.read(ip + 2, mode2);
-                    self.write(self.read(ip + 3, Mode::Immediate), result);
-                    ip += 4;
+                    let result = self.read(self.ip + 1, mode1) + self.read(self.ip + 2, mode2);
+                    self.write(self.read(self.ip + 3, Mode::Immediate), result);
+                    self.ip += 4;
                 }
                 Instruction::Multiply(mode1, mode2) => {
-                    let result = self.read(ip + 1, mode1) * self.read(ip + 2, mode2);
-                    self.write(self.read(ip + 3, Mode::Immediate), result);
-                    ip += 4;
+                    let result = self.read(self.ip + 1, mode1) * self.read(self.ip + 2, mode2);
+                    self.write(self.read(self.ip + 3, Mode::Immediate), result);
+                    self.ip += 4;
                 }
-                Instruction::Input => {
-                    let value = self.input.read().expect("no more input");
-                    self.write(self.read(ip + 1, Mode::Immediate), value);
-                    ip += 2;
-                }
+                Instruction::Input => match self.input.read() {
+                    Some(value) => {
+                        self.write(self.read(self.ip + 1, Mode::Immediate), value);
+                        self.ip += 2;
+                    }
+                    None => {
+                        // println!("{}: pause ip = {}", self.name, self.ip);
+                        return ComputeResult::NeedsInput;
+                    }
+                },
                 Instruction::Output(mode) => {
-                    self.output.write(self.read(ip + 1, mode));
-                    ip += 2;
+                    let value = self.read(self.ip + 1, mode);
+                    println!("{}: output {}", self.name, value);
+                    self.output.write(value);
+                    self.ip += 2;
                 }
                 Instruction::JumpIfTrue(mode1, mode2) => {
-                    if self.read(ip + 1, mode1) != 0 {
-                        ip = self.read(ip + 2, mode2);
+                    if self.read(self.ip + 1, mode1) != 0 {
+                        self.ip = self.read(self.ip + 2, mode2);
                     } else {
-                        ip += 3;
+                        self.ip += 3;
                     }
                 }
                 Instruction::JumpIfFalse(mode1, mode2) => {
-                    if self.read(ip + 1, mode1) == 0 {
-                        ip = self.read(ip + 2, mode2);
+                    if self.read(self.ip + 1, mode1) == 0 {
+                        self.ip = self.read(self.ip + 2, mode2);
                     } else {
-                        ip += 3;
+                        self.ip += 3;
                     }
                 }
                 Instruction::LessThan(mode1, mode2) => {
-                    if self.read(ip + 1, mode1) < self.read(ip + 2, mode2) {
-                        self.write(self.read(ip + 3, Mode::Immediate), 1);
+                    if self.read(self.ip + 1, mode1) < self.read(self.ip + 2, mode2) {
+                        self.write(self.read(self.ip + 3, Mode::Immediate), 1);
                     } else {
-                        self.write(self.read(ip + 3, Mode::Immediate), 0);
+                        self.write(self.read(self.ip + 3, Mode::Immediate), 0);
                     }
-                    ip += 4;
+                    self.ip += 4;
                 }
                 Instruction::Equals(mode1, mode2) => {
-                    if self.read(ip + 1, mode1) == self.read(ip + 2, mode2) {
-                        self.write(self.read(ip + 3, Mode::Immediate), 1);
+                    if self.read(self.ip + 1, mode1) == self.read(self.ip + 2, mode2) {
+                        self.write(self.read(self.ip + 3, Mode::Immediate), 1);
                     } else {
-                        self.write(self.read(ip + 3, Mode::Immediate), 0);
+                        self.write(self.read(self.ip + 3, Mode::Immediate), 0);
                     }
-                    ip += 4;
+                    self.ip += 4;
                 }
-                Instruction::Halt => break,
+                Instruction::Halt => return ComputeResult::Halted,
             }
         }
     }
 
     pub fn output(&self) -> i32 {
         self.output.last_value()
+    }
+}
+
+impl Pipe {
+    pub fn new(queue: VecDeque<i32>) -> Self {
+        Pipe { queue, last: None }
+    }
+
+    pub fn push_front(&mut self, value: i32) {
+        self.queue.push_front(value);
     }
 }
 
@@ -213,8 +275,8 @@ mod tests {
     #[test]
     fn test_day2() {
         let input = fs::read_to_string("input/day2.txt").unwrap();
-        let mut data = input::read_separated_line(',', &input).unwrap();
-        let mut program = Computer::new(&mut data, vec![]);
+        let data = input::read_separated_line(',', &input).unwrap();
+        let mut program = Computer::new('2', data, vec![], vec![]);
 
         // Check that day2 still works wirh run through this implementation
         program.run(Some(12), Some(2));
