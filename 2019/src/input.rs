@@ -18,7 +18,7 @@ pub fn read_number_list<P: AsRef<Path>>(path: P) -> io::Result<Vec<i32>> {
     Ok(output)
 }
 
-pub fn read_separated_line(sep: char, line: &str) -> io::Result<Vec<i32>> {
+pub fn read_separated_line(sep: char, line: &str) -> io::Result<Vec<i64>> {
     line.trim()
         .split(sep)
         .map(|number| {

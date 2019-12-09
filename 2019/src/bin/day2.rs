@@ -78,6 +78,7 @@ mod tests {
 
         assert_eq!(program, &[2, 0, 0, 0, 99])
     }
+
     #[test]
     fn test_example4() {
         let input = "1,1,1,4,99,5,6,0,99";

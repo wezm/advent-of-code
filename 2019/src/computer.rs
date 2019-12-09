@@ -1,32 +1,35 @@
 use std::cell::RefCell;
 use std::collections::VecDeque;
+use std::convert::TryFrom;
 use std::rc::Rc;
 
-type Address = i32;
+type Address = i64;
 
 #[derive(Debug, Eq, PartialEq)]
 enum Instruction {
-    Add(Mode, Mode),
-    Multiply(Mode, Mode),
-    Input,
+    Add(Mode, Mode, Mode),
+    Multiply(Mode, Mode, Mode),
+    Input(Mode),
     Output(Mode),
     JumpIfTrue(Mode, Mode),
     JumpIfFalse(Mode, Mode),
-    LessThan(Mode, Mode),
-    Equals(Mode, Mode),
+    LessThan(Mode, Mode, Mode),
+    Equals(Mode, Mode, Mode),
+    AdjustRelativeBase(Mode),
     Halt,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 enum Mode {
     Immediate,
     Address,
+    Relative,
 }
 
 #[derive(Debug)]
 pub struct Pipe {
-    queue: VecDeque<i32>,
-    last: Option<i32>,
+    queue: VecDeque<i64>,
+    last: Option<i64>,
 }
 
 pub enum ComputeResult {
@@ -36,57 +39,58 @@ pub enum ComputeResult {
 
 pub struct Computer<I: Input, O: Output> {
     name: char,
-    ip: i32,
-    memory: Vec<i32>,
+    ip: i64,
+    memory: Vec<i64>,
     input: I,
     output: O,
+    relative_base: i64,
 }
 
 pub trait Input {
-    fn read(&mut self) -> Option<i32>;
+    fn read(&mut self) -> Option<i64>;
 }
 
 pub trait Output {
-    fn write(&mut self, value: i32);
+    fn write(&mut self, value: i64);
 
-    fn last_value(&self) -> i32;
+    fn last_value(&self) -> i64;
 }
 
-impl Input for Vec<i32> {
-    fn read(&mut self) -> Option<i32> {
+impl Input for Vec<i64> {
+    fn read(&mut self) -> Option<i64> {
         self.pop()
     }
 }
 
-impl Output for Vec<i32> {
-    fn write(&mut self, value: i32) {
+impl Output for Vec<i64> {
+    fn write(&mut self, value: i64) {
         self.push(value)
     }
 
-    fn last_value(&self) -> i32 {
+    fn last_value(&self) -> i64 {
         *self.last().unwrap()
     }
 }
 
 impl Input for Rc<RefCell<Pipe>> {
-    fn read(&mut self) -> Option<i32> {
+    fn read(&mut self) -> Option<i64> {
         dbg!(self.borrow_mut().queue.pop_front())
     }
 }
 
 impl Output for Rc<RefCell<Pipe>> {
-    fn write(&mut self, value: i32) {
+    fn write(&mut self, value: i64) {
         let mut pipe = self.borrow_mut();
         pipe.last = Some(value);
         pipe.queue.push_back(value);
     }
 
-    fn last_value(&self) -> i32 {
+    fn last_value(&self) -> i64 {
         self.borrow().last.unwrap()
     }
 }
 
-fn decode(mut instruction: i32) -> Instruction {
+fn decode(mut instruction: i64) -> Instruction {
     let opcode = divmod(&mut instruction, 100);
 
     match opcode {
@@ -96,13 +100,15 @@ fn decode(mut instruction: i32) -> Instruction {
             Instruction::Add(
                 Mode::from(divmod(&mut instruction, 10)),
                 Mode::from(divmod(&mut instruction, 10)),
+                Mode::from(divmod(&mut instruction, 10)),
             )
         }
         2 => Instruction::Multiply(
             Mode::from(divmod(&mut instruction, 10)),
             Mode::from(divmod(&mut instruction, 10)),
+            Mode::from(divmod(&mut instruction, 10)),
         ),
-        3 => Instruction::Input,
+        3 => Instruction::Input(Mode::from(divmod(&mut instruction, 10))),
         4 => Instruction::Output(Mode::from(divmod(&mut instruction, 10))),
         5 => Instruction::JumpIfTrue(
             Mode::from(divmod(&mut instruction, 10)),
@@ -115,11 +121,14 @@ fn decode(mut instruction: i32) -> Instruction {
         7 => Instruction::LessThan(
             Mode::from(divmod(&mut instruction, 10)),
             Mode::from(divmod(&mut instruction, 10)),
+            Mode::from(divmod(&mut instruction, 10)),
         ),
         8 => Instruction::Equals(
             Mode::from(divmod(&mut instruction, 10)),
             Mode::from(divmod(&mut instruction, 10)),
+            Mode::from(divmod(&mut instruction, 10)),
         ),
+        9 => Instruction::AdjustRelativeBase(Mode::from(divmod(&mut instruction, 10))),
         99 => Instruction::Halt,
         _ => panic!("Invalid opcode: {}", opcode),
     }
@@ -130,13 +139,17 @@ where
     I: Input,
     O: Output,
 {
-    pub fn new(name: char, memory: Vec<i32>, input: I, output: O) -> Self {
+    pub fn new(name: char, mut memory: Vec<i64>, input: I, output: O) -> Self {
+        // HACK
+        let mut buffer = vec![0; 64 * 1024 * 1024];
+        memory.append(&mut buffer);
         Computer {
             name,
             ip: 0,
             memory,
             input,
             output,
+            relative_base: 0,
         }
     }
 
@@ -144,41 +157,52 @@ where
         self.name
     }
 
-    fn read(&self, value: i32, mode: Mode) -> i32 {
+    fn read(&self, value: i64, mode: Mode) -> i64 {
         match mode {
             Mode::Immediate => self.memory[value as usize],
             Mode::Address => self.memory[self.memory[value as usize] as usize],
+            // The address a relative mode parameter refers to is itself plus the current relative base.
+            Mode::Relative => {
+                self.memory
+                    [usize::try_from(self.relative_base + self.memory[value as usize]).unwrap()]
+            }
         }
     }
 
-    fn write(&mut self, address: Address, value: i32) {
-        self.memory[address as usize] = value;
+    fn write(&mut self, address: Address, value: i64, mode: Mode) {
+        match mode {
+            Mode::Immediate => panic!("attempt to write with immediate mode"),
+            Mode::Address => self.memory[address as usize] = value,
+            Mode::Relative => {
+                self.memory[usize::try_from(self.relative_base + address).unwrap()] = value
+            }
+        }
     }
 
-    pub fn run(&mut self, noun: Option<i32>, verb: Option<i32>) -> ComputeResult {
+    pub fn run(&mut self, noun: Option<i64>, verb: Option<i64>) -> ComputeResult {
         println!("{}: resume ip = {}", self.name, self.ip);
         if let Some(noun) = noun {
-            self.write(1, noun);
+            self.write(1, noun, Mode::Address);
         }
         if let Some(verb) = verb {
-            self.write(2, verb);
+            self.write(2, verb, Mode::Address);
         }
 
         loop {
             match decode(self.read(self.ip, Mode::Immediate)) {
-                Instruction::Add(mode1, mode2) => {
+                Instruction::Add(mode1, mode2, write_mode) => {
                     let result = self.read(self.ip + 1, mode1) + self.read(self.ip + 2, mode2);
-                    self.write(self.read(self.ip + 3, Mode::Immediate), result);
+                    self.write(self.read(self.ip + 3, Mode::Immediate), result, write_mode);
                     self.ip += 4;
                 }
-                Instruction::Multiply(mode1, mode2) => {
+                Instruction::Multiply(mode1, mode2, write_mode) => {
                     let result = self.read(self.ip + 1, mode1) * self.read(self.ip + 2, mode2);
-                    self.write(self.read(self.ip + 3, Mode::Immediate), result);
+                    self.write(self.read(self.ip + 3, Mode::Immediate), result, write_mode);
                     self.ip += 4;
                 }
-                Instruction::Input => match self.input.read() {
+                Instruction::Input(write_mode) => match self.input.read() {
                     Some(value) => {
-                        self.write(self.read(self.ip + 1, Mode::Immediate), value);
+                        self.write(self.read(self.ip + 1, Mode::Immediate), value, write_mode);
                         self.ip += 2;
                     }
                     None => {
@@ -206,53 +230,60 @@ where
                         self.ip += 3;
                     }
                 }
-                Instruction::LessThan(mode1, mode2) => {
+                Instruction::LessThan(mode1, mode2, write_mode) => {
                     if self.read(self.ip + 1, mode1) < self.read(self.ip + 2, mode2) {
-                        self.write(self.read(self.ip + 3, Mode::Immediate), 1);
+                        self.write(self.read(self.ip + 3, Mode::Immediate), 1, write_mode);
                     } else {
-                        self.write(self.read(self.ip + 3, Mode::Immediate), 0);
+                        self.write(self.read(self.ip + 3, Mode::Immediate), 0, write_mode);
                     }
                     self.ip += 4;
                 }
-                Instruction::Equals(mode1, mode2) => {
+                Instruction::Equals(mode1, mode2, write_mode) => {
                     if self.read(self.ip + 1, mode1) == self.read(self.ip + 2, mode2) {
-                        self.write(self.read(self.ip + 3, Mode::Immediate), 1);
+                        self.write(self.read(self.ip + 3, Mode::Immediate), 1, write_mode);
                     } else {
-                        self.write(self.read(self.ip + 3, Mode::Immediate), 0);
+                        self.write(self.read(self.ip + 3, Mode::Immediate), 0, write_mode);
                     }
                     self.ip += 4;
+                }
+                Instruction::AdjustRelativeBase(mode) => {
+                    let base = self.read(self.ip + 1, mode);
+                    self.relative_base += base;
+                    self.relative_base;
+                    self.ip += 2;
                 }
                 Instruction::Halt => return ComputeResult::Halted,
             }
         }
     }
 
-    pub fn output(&self) -> i32 {
+    pub fn output(&self) -> i64 {
         self.output.last_value()
     }
 }
 
 impl Pipe {
-    pub fn new(queue: VecDeque<i32>) -> Self {
+    pub fn new(queue: VecDeque<i64>) -> Self {
         Pipe { queue, last: None }
     }
 
-    pub fn push_front(&mut self, value: i32) {
+    pub fn push_front(&mut self, value: i64) {
         self.queue.push_front(value);
     }
 }
 
-fn divmod(value: &mut i32, divisor: i32) -> i32 {
+fn divmod(value: &mut i64, divisor: i64) -> i64 {
     let res = *value % divisor;
     *value /= divisor;
     res
 }
 
-impl From<i32> for Mode {
-    fn from(mode: i32) -> Self {
+impl From<i64> for Mode {
+    fn from(mode: i64) -> Self {
         match mode {
             0 => Mode::Address,
             1 => Mode::Immediate,
+            2 => Mode::Relative,
             _ => unreachable!(),
         }
     }
@@ -268,7 +299,7 @@ mod tests {
     fn test_decode() {
         assert_eq!(
             decode(1002),
-            Instruction::Multiply(Mode::Address, Mode::Immediate)
+            Instruction::Multiply(Mode::Address, Mode::Immediate, Mode::Address)
         )
     }
 
