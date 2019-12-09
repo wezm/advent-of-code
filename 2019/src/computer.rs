@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::convert::TryFrom;
+use std::ops::{Index, IndexMut};
 use std::rc::Rc;
 
 type Address = i64;
@@ -37,10 +38,12 @@ pub enum ComputeResult {
     NeedsInput,
 }
 
+struct Memory(Vec<i64>);
+
 pub struct Computer<I: Input, O: Output> {
     name: char,
     ip: i64,
-    memory: Vec<i64>,
+    memory: Memory,
     input: I,
     output: O,
     relative_base: i64,
@@ -94,15 +97,11 @@ fn decode(mut instruction: i64) -> Instruction {
     let opcode = divmod(&mut instruction, 100);
 
     match opcode {
-        1 => {
-            // let mode3 = divmod(&mut instruction, 10);
-            // Parameters that an instruction writes to will never be in immediate mode.
-            Instruction::Add(
-                Mode::from(divmod(&mut instruction, 10)),
-                Mode::from(divmod(&mut instruction, 10)),
-                Mode::from(divmod(&mut instruction, 10)),
-            )
-        }
+        1 => Instruction::Add(
+            Mode::from(divmod(&mut instruction, 10)),
+            Mode::from(divmod(&mut instruction, 10)),
+            Mode::from(divmod(&mut instruction, 10)),
+        ),
         2 => Instruction::Multiply(
             Mode::from(divmod(&mut instruction, 10)),
             Mode::from(divmod(&mut instruction, 10)),
@@ -139,14 +138,11 @@ where
     I: Input,
     O: Output,
 {
-    pub fn new(name: char, mut memory: Vec<i64>, input: I, output: O) -> Self {
-        // HACK
-        let mut buffer = vec![0; 64 * 1024 * 1024];
-        memory.append(&mut buffer);
+    pub fn new(name: char, memory: Vec<i64>, input: I, output: O) -> Self {
         Computer {
             name,
             ip: 0,
-            memory,
+            memory: Memory(memory),
             input,
             output,
             relative_base: 0,
@@ -286,6 +282,31 @@ impl From<i64> for Mode {
             2 => Mode::Relative,
             _ => unreachable!(),
         }
+    }
+}
+
+impl Index<usize> for Memory {
+    type Output = i64;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        if index >= self.0.len() {
+            // Out of range reads, read 0
+            return &0;
+        }
+
+        self.0.index(index)
+    }
+}
+
+impl IndexMut<usize> for Memory {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        if index >= self.0.len() {
+            // Out of range write, need to expand to allow
+            let mut extra = vec![0; (index + 1) - self.0.len()];
+            self.0.append(&mut extra);
+        }
+
+        self.0.index_mut(index)
     }
 }
 
