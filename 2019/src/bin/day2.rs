@@ -27,7 +27,7 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn run_program(program: &mut [i32], noun: i32, verb: i32) {
+fn run_program(program: &mut [i64], noun: i64, verb: i64) {
     program[1] = noun;
     program[2] = verb;
     let mut addr = 0;
@@ -50,7 +50,7 @@ fn run_program(program: &mut [i32], noun: i32, verb: i32) {
     }
 }
 
-fn part2(target: i32, program: &[i32]) -> (i32, i32) {
+fn part2(target: i64, program: &[i64]) -> (i64, i64) {
     for noun in 0..=99 {
         for verb in 0..=99 {
             let mut candidate = program.to_vec();

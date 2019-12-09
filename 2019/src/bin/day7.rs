@@ -18,9 +18,9 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn part1(data: Vec<i32>) {
-    let mut elements = [0i32; AMPLIFIERS];
-    for i in 0i32..=4 {
+fn part1(data: Vec<i64>) {
+    let mut elements = [0i64; AMPLIFIERS];
+    for i in 0i64..=4 {
         elements[i as usize] = i;
     }
     let max = phase_settings(elements)
@@ -42,9 +42,9 @@ fn part1(data: Vec<i32>) {
     println!("Part 1: {}", max);
 }
 
-fn part2(data: Vec<i32>) {
-    let mut elements = [0i32; AMPLIFIERS];
-    for i in 5i32..=9 {
+fn part2(data: Vec<i64>) {
+    let mut elements = [0i64; AMPLIFIERS];
+    for i in 5i64..=9 {
         elements[i as usize - 5] = i;
     }
 
@@ -57,7 +57,7 @@ fn part2(data: Vec<i32>) {
     println!("Part 2: {}", max);
 }
 
-fn run_part2_with_settings(data: Vec<i32>, settings: [i32; AMPLIFIERS]) -> i32 {
+fn run_part2_with_settings(data: Vec<i64>, settings: [i64; AMPLIFIERS]) -> i64 {
     // Construct the amplifiers and the pipes between them
     // The first amplifier gets io_pipe as input
     // The last amplifier gets io_pipe as output
@@ -112,15 +112,15 @@ fn run_part2_with_settings(data: Vec<i32>, settings: [i32; AMPLIFIERS]) -> i32 {
     io_pipe.last_value()
 }
 
-fn phase_settings(mut elements: [i32; AMPLIFIERS]) -> Vec<[i32; AMPLIFIERS]> {
+fn phase_settings(mut elements: [i64; AMPLIFIERS]) -> Vec<[i64; AMPLIFIERS]> {
     let mut permutations = Vec::new();
-    let mut indexes = [0i32; AMPLIFIERS];
+    let mut indexes = [0i64; AMPLIFIERS];
 
     permutations.push(elements);
 
     let mut i = 0;
     while i < AMPLIFIERS {
-        if indexes[i] < i as i32 {
+        if indexes[i] < i as i64 {
             elements.swap(if i % 2 == 0 { 0 } else { indexes[i] as usize }, i);
             permutations.push(elements);
             indexes[i] += 1;
