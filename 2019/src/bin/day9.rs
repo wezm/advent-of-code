@@ -11,9 +11,9 @@ fn main() -> io::Result<()> {
     computer.run(None, None);
     println!("Part 1:  {}", computer.output());
 
-    //    let mut computer = computer::Computer::new('2', data.clone(), vec![5], vec![]);
-    //    computer.run(None, None);
-    //    println!("Part 2:  {}", computer.output());
+    let mut computer = Computer::new('2', program.clone(), vec![2], vec![]);
+    computer.run(None, None);
+    println!("Part 2:  {}", computer.output());
 
     Ok(())
 }
