@@ -33,7 +33,7 @@ fn part1(data: Vec<i64>) {
                 let mut computer = Computer::new(name, data.clone(), input, vec![]);
                 name = char::try_from(name as u32 + 1).unwrap();
                 computer.run(None, None);
-                output = computer.output();
+                output = computer.last_output();
             }
             output
         })

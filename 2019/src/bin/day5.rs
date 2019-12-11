@@ -7,11 +7,11 @@ fn main() -> io::Result<()> {
 
     let mut computer = computer::Computer::new('1', data.clone(), vec![1], vec![]);
     computer.run(None, None);
-    println!("Part 1:  {}", computer.output());
+    println!("Part 1:  {}", computer.last_output());
 
     let mut computer = computer::Computer::new('2', data.clone(), vec![5], vec![]);
     computer.run(None, None);
-    println!("Part 2:  {}", computer.output());
+    println!("Part 2:  {}", computer.last_output());
 
     Ok(())
 }

@@ -9,11 +9,11 @@ fn main() -> io::Result<()> {
 
     let mut computer = Computer::new('1', program.clone(), vec![1], vec![]);
     computer.run(None, None);
-    println!("Part 1:  {}", computer.output());
+    println!("Part 1:  {}", computer.last_output());
 
     let mut computer = Computer::new('2', program.clone(), vec![2], vec![]);
     computer.run(None, None);
-    println!("Part 2:  {}", computer.output());
+    println!("Part 2:  {}", computer.last_output());
 
     Ok(())
 }
@@ -28,7 +28,7 @@ mod tests {
         let mut computer = Computer::new('T', program, vec![], vec![]);
         computer.run(None, None);
 
-        assert_eq!(computer.output(), 1219070632396864);
+        assert_eq!(computer.last_output(), 1219070632396864);
     }
 
     #[test]
@@ -39,7 +39,7 @@ mod tests {
         let mut computer = Computer::new('T', program, vec![], vec![]);
         computer.run(None, None);
 
-        assert_eq!(computer.output(), 99);
+        assert_eq!(computer.last_output(), 99);
     }
 
     #[test]
@@ -48,6 +48,6 @@ mod tests {
         let mut computer = Computer::new('T', program, vec![], vec![]);
         computer.run(None, None);
 
-        assert_eq!(computer.output(), 1125899906842624);
+        assert_eq!(computer.last_output(), 1125899906842624);
     }
 }

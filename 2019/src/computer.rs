@@ -51,17 +51,27 @@ pub struct Computer<I: Input, O: Output> {
 
 pub trait Input {
     fn read(&mut self) -> Option<i64>;
+
+    fn push(&mut self, val: i64);
 }
 
 pub trait Output {
     fn write(&mut self, value: i64);
 
     fn last_value(&self) -> i64;
+
+    fn get(&self) -> &[i64];
+
+    fn clear(&mut self);
 }
 
 impl Input for Vec<i64> {
     fn read(&mut self) -> Option<i64> {
         self.pop()
+    }
+
+    fn push(&mut self, val: i64) {
+        self.insert(0, val)
     }
 }
 
@@ -73,11 +83,23 @@ impl Output for Vec<i64> {
     fn last_value(&self) -> i64 {
         *self.last().unwrap()
     }
+
+    fn get(&self) -> &[i64] {
+        self
+    }
+
+    fn clear(&mut self) {
+        self.clear()
+    }
 }
 
 impl Input for Rc<RefCell<Pipe>> {
     fn read(&mut self) -> Option<i64> {
         dbg!(self.borrow_mut().queue.pop_front())
+    }
+
+    fn push(&mut self, val: i64) {
+        self.borrow_mut().queue.push_back(val)
     }
 }
 
@@ -90,6 +112,14 @@ impl Output for Rc<RefCell<Pipe>> {
 
     fn last_value(&self) -> i64 {
         self.borrow().last.unwrap()
+    }
+
+    fn get(&self) -> &[i64] {
+        unimplemented!()
+    }
+
+    fn clear(&mut self) {
+        unimplemented!()
     }
 }
 
@@ -253,8 +283,20 @@ where
         }
     }
 
-    pub fn output(&self) -> i64 {
+    pub fn last_output(&self) -> i64 {
         self.output.last_value()
+    }
+
+    pub fn input(&mut self, val: i64) {
+        self.input.push(val)
+    }
+
+    pub fn output(&self) -> &[i64] {
+        self.output.get()
+    }
+
+    pub fn clear_output(&mut self) {
+        self.output.clear()
     }
 }
 
