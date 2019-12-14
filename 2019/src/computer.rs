@@ -33,6 +33,7 @@ pub struct Pipe {
     last: Option<i64>,
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub enum ComputeResult {
     Halted,
     NeedsInput,
