@@ -1,16 +1,17 @@
 use itertools::Itertools;
 use regex::Regex;
+use std::collections::HashSet;
 use std::str::FromStr;
 use std::{fs, io, ops};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
 struct Point3D {
-    x: i64,
-    y: i64,
-    z: i64,
+    x: i32,
+    y: i32,
+    z: i32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 struct Moon {
     position: Point3D,
     velocity: Point3D,
@@ -25,7 +26,34 @@ fn main() -> io::Result<()> {
     let system: Vec<_> = moons.into_iter().map(|moon| moon.unwrap()).collect();
     println!("Part 1: {}", total_energy(&system));
 
+    let moons = parse_positions(&fs::read_to_string("input/day12.txt")?)?;
+    let cycles = cycles(moons);
+
+    dbg!(cycles);
+
     Ok(())
+}
+
+fn cycles(mut moons: Vec<Option<Moon>>) -> Vec<usize> {
+    let mut cycles = Vec::with_capacity(moons.len());
+    for i in 0..moons.len() {
+        let mut seen = HashSet::new();
+        let mut count = 0;
+        loop {
+            if count % 1000000 == 0 {
+                println!("{}", count);
+            }
+            if seen.contains(&moons[i]) {
+                dbg!(&moons[1]);
+                break;
+            }
+            seen.insert(moons[i].clone());
+            step(&mut moons);
+            count += 1;
+        }
+        cycles.push(count);
+    }
+    cycles
 }
 
 fn parse_positions(s: &str) -> io::Result<Vec<Option<Moon>>> {
@@ -76,7 +104,7 @@ fn step(system: &mut Vec<Option<Moon>>) {
     }
 }
 
-fn total_energy(system: &[Moon]) -> i64 {
+fn total_energy(system: &[Moon]) -> i32 {
     system.iter().map(|moon| moon.total_energy()).sum()
 }
 
@@ -118,15 +146,15 @@ impl Moon {
     // A moon's potential energy is the sum of the absolute values of its x, y, and z position
     // coordinates. A moon's kinetic energy is the sum of the absolute values of its velocity
     // coordinates.
-    fn potential_energy(&self) -> i64 {
+    fn potential_energy(&self) -> i32 {
         self.position.x.abs() + self.position.y.abs() + self.position.z.abs()
     }
 
-    fn kinetic_energy(&self) -> i64 {
+    fn kinetic_energy(&self) -> i32 {
         self.velocity.x.abs() + self.velocity.y.abs() + self.velocity.z.abs()
     }
 
-    fn total_energy(&self) -> i64 {
+    fn total_energy(&self) -> i32 {
         self.potential_energy() * self.kinetic_energy()
     }
 }
@@ -168,5 +196,16 @@ mod tests {
         let mut moons = parse_positions(input).unwrap();
         step(&mut moons);
         dbg!(moons);
+    }
+
+    #[test]
+    fn test_part2() {
+        let input = "<x=-1, y=0, z=2>
+<x=2, y=-10, z=-7>
+<x=4, y=-8, z=8>
+<x=3, y=5, z=-1>
+";
+        let moons = parse_positions(input).unwrap();
+        dbg!(cycles(moons));
     }
 }
