@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::{fs, io};
 
 #[derive(Debug)]
@@ -16,8 +16,28 @@ struct Reaction<'a> {
 fn main() -> io::Result<()> {
     let input = fs::read_to_string("input/day14.txt")?;
     let reactions = parse_input(&input);
+    let map = reactions
+        .iter()
+        .map(|reaction| (reaction.output.name, reaction))
+        .collect::<HashMap<_, _>>();
+    let mut inventory = HashMap::new();
 
-    println!("Day 1 part 1: {}", ore_required(&reactions));
+    let ore_for_one_fuel = ore_required(&map, &mut inventory);
+    println!("Part 1: {}", ore_for_one_fuel);
+    // println!("Part 2: {}", fuel_from_ore(1000000000000, &map));
+    let mut fuel = 1000000000000 / ore_for_one_fuel;
+    println!("Part 2: {}", fuel);
+    let remaining_ore = 1000000000000 % ore_for_one_fuel;
+
+    // multiply left over chemicals by the number of fuel that's been extracted so far
+    inventory.iter_mut().for_each(|(&key, value)| if key != "FUEL" && key != "ORE" {
+        *value *= fuel as isize;
+    });
+
+    inventory.insert("ORE", remaining_ore as isize);
+
+    fuel += fuel_from_ore(remaining_ore, &map, &mut inventory);
+    println!("Part 2: {}", fuel);
 
     Ok(())
 }
@@ -44,22 +64,39 @@ fn parse_material(s: &str) -> Material {
     }
 }
 
-fn ore_required(reactions: &[Reaction]) -> usize {
-    // Find FUEL and work back to ORE to find paths?
-    let map = reactions
-        .iter()
-        .map(|reaction| (reaction.output.name, reaction))
-        .collect::<HashMap<_, _>>();
-
-    let mut inventory = HashMap::new();
-    run_reaction("FUEL", &map, &mut inventory);
+fn ore_required<'a>(map: &'a HashMap<&'a str, &Reaction>, inventory: &mut HashMap<&'a str, isize>) -> usize {
+    run_reaction("FUEL", &map, inventory);
     inventory.get("ORE").copied().unwrap_or_default().abs() as usize
+}
+
+fn fuel_from_ore<'a>(ore: usize, map: &'a HashMap<&'a str, &Reaction>, inventory: &mut HashMap<&'a str, isize>) -> usize {
+    let ore = ore as isize;
+    let mut fuel = inventory.get("FUEL").copied().unwrap_or_default();
+    while inventory.get("ORE").copied().unwrap_or_default().abs() < ore {
+        run_reaction("FUEL", &map, inventory);
+        if inventory.iter().any(|(&key, &value)| {
+            if key != "ORE" && key != "FUEL" {
+                value < 0
+            }
+            else {
+                false
+            }
+        }) {
+            break
+        }
+
+        fuel = inventory["FUEL"];
+    }
+
+    dbg!(&inventory);
+
+    fuel as usize
 }
 
 // Run the named reaction, updating the inventory
 fn run_reaction<'a>(
     name: &'a str,
-    tree: &'a HashMap<&'a str, &'a Reaction>,
+    tree: &'a HashMap<&'a str, &Reaction>,
     inventory: &mut HashMap<&'a str, isize>,
 ) {
     let node = tree[name];
@@ -91,7 +128,12 @@ mod tests {
 2 AB, 3 BC, 4 CA => 1 FUEL
 ";
         let reactions = parse_input(&input);
+        let map = reactions
+            .iter()
+            .map(|reaction| (reaction.output.name, reaction))
+            .collect::<HashMap<_, _>>();
+        let mut inventory = HashMap::new();
 
-        assert_eq!(ore_required(&reactions), 165);
+        assert_eq!(ore_required(&map, &mut inventory), 165);
     }
 }
