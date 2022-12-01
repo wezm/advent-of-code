@@ -1,7 +1,6 @@
 import gleam/string
 import gleam/int
 import gleam/list
-import gleam/io
 
 pub fn pt_1(input: String) -> Int {
   assert Ok(max) =
@@ -12,7 +11,12 @@ pub fn pt_1(input: String) -> Int {
 }
 
 pub fn pt_2(input: String) -> Int {
-  todo
+  string.split(input, on: "\n")
+  |> aggregate_calories([0])
+  |> list.sort(int.compare)
+  |> list.reverse
+  |> list.take(3)
+  |> int.sum
 }
 
 fn aggregate_calories(lines: List(String), sums: List(Int)) -> List(Int) {
