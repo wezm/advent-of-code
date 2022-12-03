@@ -1,6 +1,7 @@
 import gleam/int
 import gleam/set
 import gleam/list.{map}
+import gleam/iterator
 import gleam/string
 
 type Rucksack =
@@ -8,15 +9,21 @@ type Rucksack =
 
 pub fn pt_1(input: String) -> Int {
   string.split(input, on: "\n")
-  |> list.map(string.to_graphemes)
-  |> list.map(split_in_half)
-  |> list.map(common_item)
-  |> list.map(priority)
+  |> map(string.to_graphemes)
+  |> map(split_in_half)
+  |> map(common_item)
+  |> map(priority)
   |> int.sum
 }
 
 pub fn pt_2(input: String) -> Int {
-  todo
+  string.split(input, on: "\n")
+  |> map(string.to_graphemes)
+  |> iterator.from_list
+  |> iterator.sized_chunk(3)
+  |> iterator.map(common_item_pt2)
+  |> iterator.map(priority)
+  |> iterator.fold(0, fn(sum, prio) { sum + prio })
 }
 
 fn split_in_half(l: List(String)) -> Rucksack {
@@ -27,6 +34,19 @@ fn common_item(rucksack: Rucksack) -> String {
   let one = set.from_list(rucksack.0)
   let two = set.from_list(rucksack.1)
   let inter = set.intersection(one, two)
+  assert 1 = set.size(inter)
+  assert Ok(common) =
+    inter
+    |> set.to_list
+    |> list.first
+  common
+}
+
+fn common_item_pt2(sacks: List(List(String))) -> String {
+  assert Ok(inter) =
+    sacks
+    |> map(set.from_list)
+    |> list.reduce(set.intersection)
   assert 1 = set.size(inter)
   assert Ok(common) =
     inter
