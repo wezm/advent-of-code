@@ -16,7 +16,11 @@ pub fn pt_1(input: String) -> Int {
 }
 
 pub fn pt_2(input: String) -> Int {
-  todo
+  string.split(input, on: "\n")
+  |> iterator.from_list
+  |> iterator.map(parse_line)
+  |> iterator.filter(overlaps)
+  |> iterator.fold(0, fn(sum, _) { sum + 1 })
 }
 
 fn parse_line(line: String) -> #(Range, Range) {
@@ -42,4 +46,13 @@ fn fully_contains(pair: #(Range, Range)) -> Bool {
   let a = pair.0
   let b = pair.1
   b.start >= a.start && b.end <= a.end || a.start >= b.start && a.end <= b.end
+}
+
+fn overlaps(pair: #(Range, Range)) -> Bool {
+  let a = pair.0
+  let b = pair.1
+  case a.start < b.start {
+    True -> b.start <= a.end
+    False -> a.start <= b.end
+  }
 }
