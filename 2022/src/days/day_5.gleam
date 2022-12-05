@@ -1,5 +1,6 @@
 import gleam/io.{debug}
 import gleam/int
+import gleam/function.{identity}
 import gleam/list.{map}
 import gleam/map.{Map}
 import gleam/iterator
@@ -11,6 +12,26 @@ type Movement {
 }
 
 pub fn pt_1(input: String) -> Int {
+  let #(stack_count, stacks, movements) = load_input(input)
+  execute_movements(stacks, movements, list.reverse)
+  |> top_of_stacks(stack_count - 1, [])
+  |> string.concat
+  |> io.println
+
+  0
+}
+
+pub fn pt_2(input: String) -> Int {
+  let #(stack_count, stacks, movements) = load_input(input)
+  execute_movements(stacks, movements, identity)
+  |> top_of_stacks(stack_count - 1, [])
+  |> string.concat
+  |> io.println
+
+  0
+}
+
+fn load_input(input: String) -> #(Int, Map(Int, List(String)), List(Movement)) {
   let lines = string.split(input, on: "\n")
   assert Ok(first_line) = list.first(lines)
   let stack_count = { string.length(first_line) + 1 } / 4
@@ -31,16 +52,7 @@ pub fn pt_1(input: String) -> Int {
     |> iterator.map(parse_movement)
     |> iterator.to_list
 
-  execute_movements(parsed, movements)
-  |> top_of_stacks(stack_count - 1, [])
-  |> string.concat
-  |> io.println
-
-  0
-}
-
-pub fn pt_2(input: String) -> Int {
-  todo
+  #(stack_count, parsed, movements)
 }
 
 fn parse_stacks(
@@ -79,16 +91,19 @@ fn parse_movement(line: String) -> Movement {
 fn execute_movements(
   stacks: Map(Int, List(String)),
   movements: List(Movement),
+  process: fn(List(String)) -> List(String),
 ) -> Map(Int, List(String)) {
   case movements {
     [] -> stacks
-    [m, ..ms] -> execute_movements(execute_movement(stacks, m), ms)
+    [m, ..ms] ->
+      execute_movements(execute_movement(stacks, m, process), ms, process)
   }
 }
 
 fn execute_movement(
   stacks: Map(Int, List(String)),
   movement: Movement,
+  process: fn(List(String)) -> List(String),
 ) -> Map(Int, List(String)) {
   assert Ok(from) = map.get(stacks, movement.from)
   assert Ok(to) = map.get(stacks, movement.to)
@@ -97,7 +112,7 @@ fn execute_movement(
   // update the stacks
   stacks
   |> map.insert(movement.from, remaining)
-  |> map.insert(movement.to, list.append(list.reverse(to_move), to))
+  |> map.insert(movement.to, list.append(process(to_move), to))
 }
 
 fn top_of_stacks(
