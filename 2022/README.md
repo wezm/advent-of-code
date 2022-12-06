@@ -1,24 +1,16 @@
-# advent_of_code
+# Advent of Code 2022
 
-[![Package Version](https://img.shields.io/hexpm/v/advent_of_code)](https://hex.pm/packages/advent_of_code)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/advent_of_code/)
+This year I decided to forego my usual Rust solutions and try to solve the
+problems in [Gleam]. Gleam is a statically typed functional programming
+language that runs on the Erlang virtual machine, or JavaScript engine
+implemented in Rust. My code targets the Erlang VM.
 
-A Gleam project
+The Gleam code was written against version 0.25 of the language.
 
-## Quick start
-
-```sh
-gleam run   # Run the project
-gleam test  # Run the tests
-gleam shell # Run an Erlang shell
-```
-
-## Installation
-
-If available on Hex this package can be added to your Gleam project:
+## Run
 
 ```sh
-gleam add advent_of_code
+gleam run run n  # Run AoC day n
 ```
 
-and its documentation can be found at <https://hexdocs.pm/advent_of_code>.
+[Gleam]: https://gleam.run/
