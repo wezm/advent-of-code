@@ -4,6 +4,8 @@ use std::ops::DerefMut;
 use std::rc::Rc;
 
 const LIMIT: usize = 100_000;
+const DISK_CAPACITY: usize = 70_000_000;
+const NEED_FREE: usize = 30_000_000;
 
 type Node<'a> = Rc<RefCell<FsNode<'a>>>;
 
@@ -43,7 +45,18 @@ fn main() -> io::Result<()> {
 
     // Traverse the filesystem tree looking for large dirs
     let sum_of_large_dirs = traverse(&root.borrow());
-    println!("{}", sum_of_large_dirs);
+    println!("Part 1: {}", sum_of_large_dirs);
+
+    let disk_free = DISK_CAPACITY - node_size(&root.borrow());
+    let need_to_free = NEED_FREE - disk_free;
+    println!(
+        "Part 2: Disk free {}, need to free {}",
+        disk_free, need_to_free
+    );
+
+    // Need to find the directory with size closest to need_to_free
+    let part2 = find_closest_dir_size(&root.borrow(), need_to_free, DISK_CAPACITY);
+    println!("Part 2: {}", part2);
 
     Ok(())
 }
@@ -61,6 +74,24 @@ fn traverse(node: &FsNode<'_>) -> usize {
             sum
         }
         FsNodeData::File(_) => 0,
+    }
+}
+
+fn find_closest_dir_size(node: &FsNode<'_>, need_to_free: usize, mut min: usize) -> usize {
+    match &node.data {
+        FsNodeData::Dir(Dir { size, children, .. }) => {
+            if *size >= need_to_free && *size < min {
+                min = *size
+            }
+            for child in children {
+                let size = find_closest_dir_size(&child.borrow(), need_to_free, DISK_CAPACITY);
+                if size >= need_to_free && size < min {
+                    min = size
+                }
+            }
+            min
+        }
+        FsNodeData::File(_) => min,
     }
 }
 
@@ -158,6 +189,13 @@ fn update_size(size: usize, node: &mut FsNode<'_>) {
 
 fn new_node<'a>(parent: Option<Node<'a>>, data: FsNodeData<'a>) -> Node<'a> {
     Rc::new(RefCell::new(FsNode::new(parent, data)))
+}
+
+fn node_size(node: &FsNode<'_>) -> usize {
+    let FsNode { data: FsNodeData::Dir(dir), .. } = node else {
+        panic!("node is not a dir")
+    };
+    dir.size
 }
 
 fn err(msg: &str) -> io::Error {
