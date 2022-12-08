@@ -1,10 +1,8 @@
-import gleam/io.{debug}
 import gleam/int
 import gleam/iterator.{zip}
-import gleam/result
 import gleam/string
 import gleam/list
-import gleam/option.{Some, None}
+import gleam/option.{None, Some}
 
 pub fn pt_1(input: String) -> Int {
   let trees_by_row =
@@ -18,38 +16,34 @@ pub fn pt_1(input: String) -> Int {
   let left =
     list.map(trees_by_row, scan_max)
     |> iterator.from_list
-  // debug(left |> iterator.to_list)
+
   let right =
     trees_by_row
     |> list.map(list.reverse)
     |> list.map(scan_max)
-    |> list.reverse
+    |> list.map(list.reverse)
     |> iterator.from_list
+
   let top =
     list.map(trees_by_col, scan_max)
+    |> list.transpose
     |> iterator.from_list
+
   let bottom =
     trees_by_col
     |> list.map(list.reverse)
     |> list.map(scan_max)
-    |> list.reverse
+    |> list.map(list.reverse)
+    |> list.transpose
     |> iterator.from_list
 
-  let outside_trees =
-    2 * list.length(trees_by_row) + 2 * list.length(trees_by_col) - 4
-  debug(outside_trees)
-
-  let inside_trees =
-    trees_by_row
-    |> iterator.from_list
-    |> zip(left)
-    |> zip(right)
-    |> zip(top)
-    |> zip(bottom)
-    |> iterator.fold(0, process_row)
-  debug(inside_trees)
-
-  outside_trees + inside_trees
+  trees_by_row
+  |> iterator.from_list
+  |> zip(left)
+  |> zip(right)
+  |> zip(top)
+  |> zip(bottom)
+  |> iterator.fold(0, process_row)
 }
 
 pub fn pt_2(input: String) -> Int {
@@ -69,19 +63,23 @@ fn parse_int(text: String) -> Int {
 
 pub fn scan_max(numbers: List(Int)) -> List(Int) {
   numbers
-  |> list.scan(#(None, 0), fn(acc, tree) {
-    case acc {
-      // Edge tree
-      #(None, _) -> #(Some(tree), 10)
-      // First tree in from edge
-      #(Some(prev), 10) -> #(Some(tree), prev)
-      // Other tree
-      #(Some(prev), max) -> case prev > max {
-        True -> #(Some(tree), prev)
-        False -> #(Some(tree), max)
+  |> list.scan(
+    #(None, 0),
+    fn(acc, tree) {
+      case acc {
+        // Edge tree
+        #(None, _) -> #(Some(tree), -1)
+        // First tree in from edge
+        #(Some(prev), -1) -> #(Some(tree), prev)
+        // Other tree
+        #(Some(prev), max) ->
+          case prev > max {
+            True -> #(Some(tree), prev)
+            False -> #(Some(tree), max)
+          }
       }
-    }
-  })
+    },
+  )
   |> list.map(fn(tup) { tup.1 })
 }
 
@@ -106,7 +104,6 @@ fn count_if_visible(
   record: #(#(#(#(Int, Int), Int), Int), Int),
 ) -> Int {
   let #(#(#(#(tree, left), right), top), bottom) = record
-  debug(#(tree, left, right, top, bottom))
 
   case
     [left, right, top, bottom]

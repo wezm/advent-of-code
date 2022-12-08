@@ -8,7 +8,7 @@ pub fn main() {
 
 pub fn scan_max_test() {
   day_8.scan_max([2, 5, 5, 1, 2])
-  |> should.equal([10, 2, 5, 5, 5])
+  |> should.equal([-1, 2, 5, 5, 5])
 }
 
 // 30373
