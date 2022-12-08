@@ -1,4 +1,4 @@
-import gleam/io.{debug}
+import gleam/io
 import gleam/int
 import gleam/function.{identity}
 import gleam/list.{map}
