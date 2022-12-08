@@ -20,3 +20,8 @@ pub fn pt1_test() {
   day_8.pt_1("30373\n25512\n65332\n33549\n35390")
   |> should.equal(21)
 }
+
+pub fn pt2_test() {
+  day_8.pt_2("30373\n25512\n65332\n33549\n35390")
+  |> should.equal(8)
+}
