@@ -14,11 +14,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn part1(input: &str) -> Result<(), Box<dyn Error>> {
     let mut tail_visited = HashSet::new();
-    let mut head = (0, 0);
-    let mut tail = (0, 0);
+    let mut knots = [(0, 0); 2];
 
     for line in input.lines() {
-        execute(line, &mut head, &mut tail, &mut tail_visited)?;
+        execute(line, &mut knots, &mut tail_visited)?;
     }
 
     println!("Part 1: tail visited {} positions", tail_visited.len());
@@ -27,13 +26,21 @@ fn part1(input: &str) -> Result<(), Box<dyn Error>> {
 }
 
 fn part2(input: &str) -> Result<(), Box<dyn Error>> {
+    let mut tail_visited = HashSet::new();
+    let mut knots = [(0, 0); 10];
+
+    for line in input.lines() {
+        execute(line, &mut knots, &mut tail_visited)?;
+    }
+
+    println!("Part 2: tail visited {} positions", tail_visited.len());
+
     Ok(())
 }
 
 fn execute(
     line: &str,
-    head: &mut Pos,
-    tail: &mut Pos,
+    knots: &mut [Pos],
     visited: &mut HashSet<Pos>,
 ) -> Result<(), Box<dyn Error>> {
     // let h = *head;
@@ -48,15 +55,17 @@ fn execute(
         Some(("R", count)) => ((1, 0), count),
         _ => Err(format!("invalid line: '{}'", line))?,
     };
-    (0..count).for_each(|_| do_move(delta, head, tail, visited));
+    (0..count).for_each(|_| do_move(delta, knots, visited));
     // println!("{}: H{:?} T{:?} -> H{:?} T{:?}", line, h, t, head, tail);
     Ok(())
 }
 
-fn do_move(delta: Pos, head: &mut Pos, tail: &mut Pos, visited: &mut HashSet<Pos>) {
-    *head = add(*head, delta);
-    *tail = move_tail(*head, *tail);
-    visited.insert(*tail);
+fn do_move(delta: Pos, knots: &mut [Pos], visited: &mut HashSet<Pos>) {
+    knots[0] = add(knots[0], delta);
+    for i in 1..knots.len() {
+        knots[i] = move_tail(knots[i - 1], knots[i]);
+    }
+    visited.insert(*knots.last().unwrap());
 }
 
 fn move_tail(head: Pos, tail: Pos) -> Pos {
