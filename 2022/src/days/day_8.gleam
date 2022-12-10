@@ -1,4 +1,3 @@
-import gleam/io.{debug}
 import gleam/int
 import gleam/iterator.{zip}
 import gleam/string
@@ -156,7 +155,7 @@ fn visible(
         |> unwrap
       {
         other if other < tree -> visible(trees, coord, delta, tree, count + 1)
-        otherwise -> count + 1
+        _ -> count + 1
       }
   }
 }

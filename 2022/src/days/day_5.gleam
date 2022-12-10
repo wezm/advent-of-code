@@ -5,7 +5,6 @@ import gleam/list.{map}
 import gleam/map.{Map}
 import gleam/iterator
 import gleam/string
-import gleam/erlang/process
 
 type Movement {
   Movement(quantity: Int, from: Int, to: Int)
@@ -132,18 +131,13 @@ fn top_of_stacks(
   }
 }
 
-fn abort(msg: String) -> Nil {
-  io.println(msg)
-  process.kill(process.self())
-}
-
-fn dump(stacks: Map(Int, List(String)), i: Int) -> Map(Int, List(String)) {
-  case i < map.size(stacks) {
-    True -> {
-      assert Ok(stack) = map.get(stacks, i)
-      io.println(int.to_string(i + 1) <> ": " <> string.join(stack, " "))
-      dump(stacks, i + 1)
-    }
-    False -> stacks
-  }
-}
+// fn dump(stacks: Map(Int, List(String)), i: Int) -> Map(Int, List(String)) {
+//   case i < map.size(stacks) {
+//     True -> {
+//       assert Ok(stack) = map.get(stacks, i)
+//       io.println(int.to_string(i + 1) <> ": " <> string.join(stack, " "))
+//       dump(stacks, i + 1)
+//     }
+//     False -> stacks
+//   }
+// }
