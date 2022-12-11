@@ -23,7 +23,20 @@ pub fn pt_1(input: String) -> Int {
   |> int.sum
 }
 
+pub const display_width = 40
+
 pub fn pt_2(input: String) -> Int {
+  string.split(input, "\n")
+  |> list.fold([Trace(1, 0)], execute)
+  |> list.reverse
+  |> list.window_by_2
+  |> list.fold([], inflate)
+  |> list.fold([], render)
+  |> list.reverse
+  |> list.sized_chunk(display_width)
+  |> list.map(string.join(_, ""))
+  |> string.join("\n")
+  |> io.println
   2
 }
 
@@ -80,4 +93,23 @@ fn matches(want: Int, a: Trace, b: Trace) -> Option(Int) {
 
 fn signal_strength(pair: #(Int, Int)) -> Int {
   pair.0 * pair.1
+}
+
+fn inflate(out: List(Trace), pair: #(Trace, Trace)) -> List(Trace) {
+  let #(prev, this) = pair
+  let inflated =
+    list.range(prev.cycles, this.cycles - 1)
+    |> list.map(fn(i) { Trace(x: prev.x, cycles: i) })
+  list.append(out, inflated)
+}
+
+fn render(display: List(String), trace: Trace) -> List(String) {
+  let x = trace.x
+  case
+    list.range(x - 1, x + 1)
+    |> list.contains(trace.cycles % display_width)
+  {
+    True -> ["#", ..display]
+    False -> [" ", ..display]
+  }
 }
