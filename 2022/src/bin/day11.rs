@@ -7,6 +7,7 @@ struct Monkey {
     op: Operation,
     test: Test,
     items_inspected: usize,
+    relief: isize,
 }
 
 #[derive(Debug)]
@@ -46,36 +47,42 @@ fn main() -> Result<(), Box<dyn Error>> {
     )?;
 
     part1(&input, &re)?;
-    part2(&input)?;
+    part2(&input, &re)?;
 
     Ok(())
 }
 
 fn part1(input: &str, re: &Regex) -> Result<(), Box<dyn Error>> {
+    let monkey_business = run(input, re, 3, 20)?;
+    println!("Monkey business: {}", monkey_business);
+    Ok(())
+}
+
+fn part2(input: &str, re: &Regex) -> Result<(), Box<dyn Error>> {
+    let monkey_business = run(input, re, 1, 10_000)?;
+    println!("Monkey business: {}", monkey_business);
+    Ok(())
+}
+
+fn run(input: &str, re: &Regex, relief: isize, rounds: usize) -> Result<usize, Box<dyn Error>> {
     let mut monkeys = input
         .split("\n\n")
-        .map(|s| parse_monkey(s, re))
+        .map(|s| parse_monkey(s, re, relief))
         .collect::<Result<Vec<_>, _>>()?;
-    for _round in 0..20 {
+    let modulus = monkeys
+        .iter()
+        .fold(1, |product, m| product * m.test.divisible_by);
+    for _round in 0..rounds {
         for i in 0..monkeys.len() {
-            take_turn(i, &mut monkeys)
+            take_turn(i, &mut monkeys, modulus)
         }
     }
 
     monkeys.sort_by(|a, b| a.items_inspected.cmp(&b.items_inspected));
-    let monkey_business =
-        monkeys[monkeys.len() - 2].items_inspected * monkeys[monkeys.len() - 1].items_inspected;
-
-    println!("Monkey business: {}", monkey_business);
-
-    Ok(())
+    Ok(monkeys[monkeys.len() - 2].items_inspected * monkeys[monkeys.len() - 1].items_inspected)
 }
 
-fn part2(input: &str) -> Result<(), Box<dyn Error>> {
-    Ok(())
-}
-
-fn parse_monkey(input: &str, re: &Regex) -> Result<Monkey, Box<dyn Error>> {
+fn parse_monkey(input: &str, re: &Regex, relief: isize) -> Result<Monkey, Box<dyn Error>> {
     let caps = re
         .captures(input.trim())
         .ok_or_else(|| format!("text did not match regex: {}", input))?;
@@ -106,6 +113,7 @@ fn parse_monkey(input: &str, re: &Regex) -> Result<Monkey, Box<dyn Error>> {
             if_false,
         },
         items_inspected: 0,
+        relief,
     })
 }
 
@@ -119,19 +127,19 @@ fn parse_operand(input: &str) -> Result<Operand, Box<dyn Error>> {
     }
 }
 
-fn take_turn(i: usize, monkeys: &mut [Monkey]) {
-    let mut res = monkeys[i].take_turn();
+fn take_turn(i: usize, monkeys: &mut [Monkey], modulus: isize) {
+    let mut res = monkeys[i].take_turn(modulus);
     monkeys[res.if_true.0].items.append(&mut res.if_true.1);
     monkeys[res.if_false.0].items.append(&mut res.if_false.1);
 }
 
 impl Monkey {
-    fn take_turn(&mut self) -> TurnResult {
+    fn take_turn(&mut self, modulus: isize) -> TurnResult {
         let mut if_true = Vec::new();
         let mut if_false = Vec::new();
 
         for item in self.items.iter().copied() {
-            let new = self.op.eval(item) / 3;
+            let new = self.op.eval(item, modulus) / self.relief;
             if self.test.test(new) {
                 if_true.push(new);
             } else {
@@ -148,12 +156,19 @@ impl Monkey {
 }
 
 impl Operation {
-    fn eval(&self, old: isize) -> isize {
-        match self.operator {
+    fn eval(&self, old: isize, modulus: isize) -> isize {
+        (match self.operator {
             '+' => self.operand1.val(old) + self.operand2.val(old),
-            '*' => self.operand1.val(old) * self.operand2.val(old),
+            '*' => match self.operand1.val(old).checked_mul(self.operand2.val(old)) {
+                Some(x) => x,
+                None => panic!(
+                    "mul fail {} x {}",
+                    self.operand1.val(old),
+                    self.operand2.val(old)
+                ),
+            },
             _ => unreachable!("unknown op"),
-        }
+        }) % modulus
     }
 }
 
