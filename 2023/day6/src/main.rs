@@ -9,11 +9,11 @@ fn main() -> Result<(), BoxError> {
         .ok_or("missing input file path")?;
     let input = fs::read_to_string(input_path)?;
     let mut lines = input.lines();
-    let times = lines.next().ok_or("missing times")?;
-    let distances = lines.next().ok_or("missing distances")?;
+    let times_text = lines.next().ok_or("missing times")?;
+    let distances_text = lines.next().ok_or("missing distances")?;
 
-    let times = parse("Time:", times)?;
-    let distances = parse("Distance:", distances)?;
+    let times = parse("Time:", times_text)?;
+    let distances = parse("Distance:", distances_text)?;
     if times.len() != distances.len() {
         return Err("time/distance length mismatch".into());
     }
@@ -36,6 +36,20 @@ fn main() -> Result<(), BoxError> {
 
     println!("Part 1: {}", results.iter().fold(1, |a, b| a * b));
 
+    let time = parse_part2("Time:", times_text)?;
+    let record_distance = parse_part2("Distance:", distances_text)?;
+
+    let mut result = 0;
+    (1..time - 1).for_each(|hold| {
+        let velocity = hold;
+        let distance = (time - hold) * velocity;
+        if distance > record_distance {
+            result += 1;
+        }
+    });
+
+    println!("Part 2: {result}");
+
     Ok(())
 }
 
@@ -51,4 +65,12 @@ fn parse(prefix: &str, line: &str) -> Result<Vec<usize>, BoxError> {
         .map(|word| word.parse::<usize>())
         .collect::<Result<Vec<_>, _>>()?;
     Ok(numbers)
+}
+
+fn parse_part2(_prefix: &str, line: &str) -> Result<usize, BoxError> {
+    line.chars()
+        .filter(|c| c.is_ascii_digit())
+        .collect::<String>()
+        .parse()
+        .map_err(BoxError::from)
 }
