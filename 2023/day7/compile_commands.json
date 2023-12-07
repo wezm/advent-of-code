@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/wmoore/Projects/advent-of-code/2023/day7",
+  "command": "c++ -Wall -fsanitize=address day7.cpp -o day7",
+  "file": "day7.cpp"
+}
+]
